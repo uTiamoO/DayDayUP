@@ -1,0 +1,84 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: daydayup-gateway
+  config:
+    # optional: 让 Nacos 不可达时仅打 WARN 而不是直接启动失败，方便骨架空跑
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+      - optional:nacos:daydayup-common.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+      config:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: daydayup-auth
+              uri: lb://daydayup-auth
+              predicates:
+                - Path=/auth/**
+              filters:
+                - StripPrefix=1
+            - id: daydayup-admin
+              uri: lb://daydayup-admin-biz
+              predicates:
+                - Path=/admin/**
+              filters:
+                - StripPrefix=1
+            - id: daydayup-game
+              uri: lb://daydayup-game-biz
+              predicates:
+                - Path=/game/**
+              filters:
+                - StripPrefix=1
+            - id: daydayup-social
+              uri: lb://daydayup-social-biz
+              predicates:
+                - Path=/social/**
+              filters:
+                - StripPrefix=1
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: true
+
+daydayup:
+  gateway:
+    jwk-set-uri: ${JWK_SET_URI:http://127.0.0.1:9200/.well-known/jwks.json}
+    permit-paths:
+      - /auth/**
+      - /*/v3/api-docs/**
+      - /actuator/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  tracing:
+    sampling:
+      probability: ${TRACE_SAMPLING:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://127.0.0.1:9411/api/v2/spans}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: info

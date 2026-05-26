@@ -1,0 +1,39 @@
+server:
+  port: 9300
+
+spring:
+  application:
+    name: daydayup-monitor
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+      - optional:nacos:daydayup-common.yaml
+  thymeleaf:
+    check-template-location: false
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+      config:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+  boot:
+    admin:
+      discovery:
+        # 网关不监控（接入层独立观测）
+        ignored-services: daydayup-gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always

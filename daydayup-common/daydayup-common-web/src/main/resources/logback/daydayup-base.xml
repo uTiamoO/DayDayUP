@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <!--
+      DayDayUP 通用日志格式 — 集成 Micrometer Tracing MDC
+
+      在业务服务的 logback-spring.xml 中：
+        <include resource="logback/daydayup-base.xml"/>
+      即可生效。
+    -->
+    <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
+    <property name="DAYDAYUP_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%5p) [${spring.application.name:-}] [%X{traceId:-},%X{spanId:-}] %clr(%-40.40logger{39}){cyan} : %m%n%wEx"/>
+
+    <appender name="DAYDAYUP_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${DAYDAYUP_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+</included>

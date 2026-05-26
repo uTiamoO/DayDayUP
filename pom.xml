@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.yuan</groupId>
+    <artifactId>daydayup</artifactId>
+    <version>0.1.0</version>
+    <description>好好学习</description>
+
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>daydayup-common</module>
+        <module>daydayup-access</module>
+        <module>daydayup-platform</module>
+        <module>daydayup-modules</module>
+    </modules>
+
+    <properties>
+        <!--为后续适配微服务的稳定版本选择-->
+        <spring.boot.version>3.5.0</spring.boot.version>
+        <spring.cloud.version>2025.0.0</spring.cloud.version>
+        <spring.cloud.alibaba.version>2025.0.0.0</spring.cloud.alibaba.version>
+        <spring-ai.version>1.0.3</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.0.0-RC2</spring-ai-alibaba.version>
+        <springdoc.version>2.6.0</springdoc.version>
+        <lombok.version>1.18.38</lombok.version>
+        <mysql.version>8.3.0</mysql.version>
+        <spring-authorization-server.version>1.4.3</spring-authorization-server.version>
+        <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
+        <redisson.version>3.40.2</redisson.version>
+        <rocketmq.version>2.3.1</rocketmq.version>
+        <xxl-job.version>2.4.2</xxl-job.version>
+        <spring-boot-admin.version>3.3.2</spring-boot-admin.version>
+        <micrometer-registry-prometheus.version>1.13.6</micrometer-registry-prometheus.version>
+        <daydayup.version>0.1.0</daydayup.version>
+        <java.version>21</java.version>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot  -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--Spring Cloud -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring.cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--Spring cloud alibaba 2023.0.1.0 -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring.cloud.alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--Spring AI-->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--AI alibaba依赖清单 -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql.version}</version>
+            </dependency>
+
+            <!-- SpringDoc 接口文档组件 -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <!-- Spring Authorization Server -->
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-oauth2-authorization-server</artifactId>
+                <version>${spring-authorization-server.version}</version>
+            </dependency>
+            <!-- MyBatis-Plus -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- Redisson -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <!-- RocketMQ -->
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq.version}</version>
+            </dependency>
+            <!-- XXL-Job 分布式任务调度 -->
+            <dependency>
+                <groupId>com.xuxueli</groupId>
+                <artifactId>xxl-job-core</artifactId>
+                <version>${xxl-job.version}</version>
+            </dependency>
+            <!-- Spring Boot Admin -->
+            <dependency>
+                <groupId>de.codecentric</groupId>
+                <artifactId>spring-boot-admin-starter-server</artifactId>
+                <version>${spring-boot-admin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.codecentric</groupId>
+                <artifactId>spring-boot-admin-starter-client</artifactId>
+                <version>${spring-boot-admin.version}</version>
+            </dependency>
+            <!-- Prometheus -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${micrometer-registry-prometheus.version}</version>
+            </dependency>
+            <!-- lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+            <!-- ================= 内部公共组件 ================= -->
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-core</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-web</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-mybatis</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-security</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-redis</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-mq</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-swagger</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-feign</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-log</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-idempotent</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-lock</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-common-xxljob</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+
+            <!-- ================= 业务模块 API ================= -->
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-admin-api</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-game-api</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-social-api</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <configuration>
+                    <addResources>true</addResources>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

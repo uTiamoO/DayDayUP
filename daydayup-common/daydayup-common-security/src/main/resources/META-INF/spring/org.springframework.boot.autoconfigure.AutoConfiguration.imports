@@ -1,0 +1,2 @@
+com.yuan.daydayup.common.security.config.ResourceServerConfig
+com.yuan.daydayup.common.security.exception.SecurityExceptionAdvice

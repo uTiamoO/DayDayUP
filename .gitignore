@@ -1,16 +1,9 @@
-# Compiled class file
+# ============ Java ============
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
 *.ctxt
-
-# Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# Package Files #
+# Package Files
 *.jar
 *.war
 *.nar
@@ -19,6 +12,63 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# JVM crash logs
 hs_err_pid*
 replay_pid*
+
+# ============ Maven ============
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ============ Logs ============
+*.log
+logs/
+
+# ============ IDE: IntelliJ IDEA ============
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ============ IDE: VS Code ============
+.vscode/
+
+# ============ IDE: Eclipse ============
+.classpath
+.project
+.settings/
+.factorypath
+
+# ============ OS ============
+.DS_Store
+Thumbs.db
+
+# ============ Spring Boot ============
+spring-shell.log
+HELP.md
+
+# ============ Local env ============
+*.local
+.env
+.env.local
+**/.env
+**/.env.local
+# Spring profile：本地开发凭据（Nacos / DB 等真实环境地址 + 账号）
+**/src/main/resources/application-local.yml
+**/src/main/resources/application-local.yaml
+
+# ============ Deploy data volumes ============
+# 各中间件 compose 的持久化目录，不入库
+deploy/**/data/
+deploy/**/*-logs/
+deploy/**/logs/
+deploy/**/conf/dynamic/

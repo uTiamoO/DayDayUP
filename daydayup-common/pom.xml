@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.yuan</groupId>
+        <artifactId>daydayup</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>daydayup-common</artifactId>
+    <packaging>pom</packaging>
+    <description>公共组件：核心工具、Web、ORM、安全、缓存、消息、文档、Feign、日志、幂等、分布式锁</description>
+
+    <modules>
+        <module>daydayup-common-core</module>
+        <module>daydayup-common-web</module>
+        <module>daydayup-common-mybatis</module>
+        <module>daydayup-common-security</module>
+        <module>daydayup-common-redis</module>
+        <module>daydayup-common-mq</module>
+        <module>daydayup-common-swagger</module>
+        <module>daydayup-common-feign</module>
+        <module>daydayup-common-log</module>
+        <module>daydayup-common-idempotent</module>
+        <module>daydayup-common-lock</module>
+        <module>daydayup-common-xxljob</module>
+    </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,59 @@
+server:
+  port: 9500
+
+spring:
+  application:
+    name: daydayup-game-biz
+  autoconfigure:
+    # P3 接入 MySQL 后移除
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+      - optional:nacos:daydayup-common.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+      config:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+
+daydayup:
+  swagger:
+    title: DayDayUP Game API
+    description: 游戏服务接口文档
+    version: 0.1.0
+  xxljob:
+    enabled: ${XXLJOB_ENABLED:false}  # 没有 XXL-JOB Admin 时关闭，避免启动报错
+    admin-addresses: ${XXLJOB_ADMIN:http://127.0.0.1:8080/xxl-job-admin}
+    app-name: daydayup-game-executor
+    access-token: ${XXLJOB_TOKEN:}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: ${TRACE_SAMPLING:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://127.0.0.1:9411/api/v2/spans}
