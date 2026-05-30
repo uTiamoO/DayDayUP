@@ -92,7 +92,7 @@ public abstract class AbstractCrudService<M extends BaseMapper<E>, E extends Bas
     protected E requireById(ID id) {
         E entity = mapper.selectById(id);
         if (entity == null) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "记录不存在");
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "记录不存在");
         }
         return entity;
     }

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yuan.daydayup.common.core.dto.BasePageQueryDTO;
 import com.yuan.daydayup.common.core.dto.BaseStatusDTO;
+import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.mybatis.entity.BaseEntity;
@@ -185,6 +186,41 @@ class AbstractCrudServiceTest {
         }
     }
 
+    // ── delete (DeletableCrudService) ───────────────────────────────────
+
+    @Nested
+    class DeleteTest {
+
+        private DeletableTestService deletableService;
+
+        @BeforeEach
+        void setUp() {
+            deletableService = new DeletableTestService(mapper);
+        }
+
+        @Test
+        void shouldDeleteExistingRecord() {
+            TestEntity entity = new TestEntity();
+            entity.setName("dave");
+            when(mapper.selectById(7L)).thenReturn(entity);
+            when(mapper.deleteById(7L)).thenReturn(1);
+
+            deletableService.delete(7L);
+
+            verify(mapper).deleteById(7L);
+        }
+
+        @Test
+        void shouldThrowWhenDeletingNonExistent() {
+            when(mapper.selectById(99L)).thenReturn(null);
+
+            assertThatThrownBy(() -> deletableService.delete(99L))
+                    .isInstanceOf(BizException.class)
+                    .hasFieldOrPropertyWithValue("code", ErrorCode.DATA_NOT_FOUND.getCode())
+                    .hasMessage("记录不存在");
+        }
+    }
+
     // ── test doubles ────────────────────────────────────────────────────
 
     @Data
@@ -241,6 +277,19 @@ class AbstractCrudServiceTest {
         @Override
         protected void validateBeforeCreate(String createDTO) {
             createValidated = true;
+        }
+    }
+
+    static class DeletableTestService extends TestService implements DeletableCrudService<Long> {
+
+        DeletableTestService(TestMapper mapper) {
+            super(mapper);
+        }
+
+        @Override
+        public void delete(Long id) {
+            requireById(id);
+            mapper.deleteById(id);
         }
     }
 }
