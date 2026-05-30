@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+
 @Service
 public class UserManageServiceImpl
         extends AbstractCrudService<SysUserMapper, SysUser, Long, UserCreateDTO, UserUpdateDTO, UserDetailVO, UserPageQueryDTO, UserStatusDTO>
@@ -94,6 +96,18 @@ public class UserManageServiceImpl
     @Override
     protected void validateBeforeUpdate(Long id, UserUpdateDTO dto) {
         checkUsernameUnique(dto.getUsername(), id);
+    }
+
+    // ── Public business methods ─────────────────────────────────────────
+
+    @Override
+    public void updateLoginInfo(Long userId, String lastLoginIp) {
+        SysUser user = mapper.selectById(userId);
+        if (user != null) {
+            user.setLastLoginAt(LocalDateTime.now());
+            user.setLastLoginIp(lastLoginIp);
+            mapper.updateById(user);
+        }
     }
 
     // ── Private helpers ────────────────────────────────────────────────

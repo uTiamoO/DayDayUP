@@ -12,11 +12,14 @@ import com.yuan.daydayup.admin.mapper.SysPermissionMapper;
 import com.yuan.daydayup.admin.mapper.SysRolePermissionMapper;
 import com.yuan.daydayup.admin.mapper.SysUserMapper;
 import com.yuan.daydayup.admin.mapper.SysUserRoleMapper;
+import com.yuan.daydayup.admin.service.UserManageService;
 import com.yuan.daydayup.common.core.result.R;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
@@ -36,6 +39,7 @@ public class UserController implements UserClient {
     private final SysUserRoleMapper userRoleMapper;
     private final SysRolePermissionMapper rolePermissionMapper;
     private final SysPermissionMapper permissionMapper;
+    private final UserManageService userManageService;
 
     @Override
     public R<UserVO> getUserById(Long userId) {
@@ -64,6 +68,14 @@ public class UserController implements UserClient {
                 .status(user.getStatus())
                 .authorities(authorities)
                 .build());
+    }
+
+    @Override
+    @PatchMapping("/manage/{userId}/login-info")
+    public R<Void> updateLoginInfo(@PathVariable("userId") Long userId,
+                                   @RequestParam("lastLoginIp") String lastLoginIp) {
+        userManageService.updateLoginInfo(userId, lastLoginIp);
+        return R.ok();
     }
 
     private Set<String> getUserAuthorities(Long userId) {

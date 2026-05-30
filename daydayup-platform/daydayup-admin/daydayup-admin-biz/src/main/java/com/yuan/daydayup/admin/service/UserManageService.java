@@ -8,4 +8,9 @@ import com.yuan.daydayup.admin.vo.UserDetailVO;
 import com.yuan.daydayup.common.mybatis.service.BaseCrudService;
 
 public interface UserManageService extends BaseCrudService<Long, UserCreateDTO, UserUpdateDTO, UserDetailVO, UserPageQueryDTO, UserStatusDTO> {
+
+    /**
+     * 更新用户最后登录信息
+     */
+    void updateLoginInfo(Long userId, String lastLoginIp);
 }
