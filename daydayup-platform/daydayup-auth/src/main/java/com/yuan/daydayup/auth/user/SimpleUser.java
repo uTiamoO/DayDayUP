@@ -20,4 +20,7 @@ public class SimpleUser {
     private String password;
 
     private Set<String> authorities;
+
+    /** 状态：0=停用，1=启用 */
+    private Integer status;
 }
