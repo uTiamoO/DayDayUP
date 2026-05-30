@@ -81,6 +81,8 @@ public class MenuServiceImpl
                 .sort(entity.getSort())
                 .visible(entity.getVisible())
                 .status(entity.getStatus())
+                .createTime(entity.getCreateTime())
+                .updateTime(entity.getUpdateTime())
                 .build();
     }
 

@@ -6,6 +6,8 @@ import com.yuan.daydayup.admin.dto.DictPageQueryDTO;
 import com.yuan.daydayup.admin.dto.DictStatusDTO;
 import com.yuan.daydayup.admin.dto.DictUpdateDTO;
 import com.yuan.daydayup.admin.entity.SysDict;
+import com.yuan.daydayup.admin.entity.SysDictItem;
+import com.yuan.daydayup.admin.mapper.SysDictItemMapper;
 import com.yuan.daydayup.admin.mapper.SysDictMapper;
 import com.yuan.daydayup.admin.service.DictService;
 import com.yuan.daydayup.admin.vo.DictVO;
@@ -20,8 +22,11 @@ public class DictServiceImpl
         extends AbstractCrudService<SysDictMapper, SysDict, Long, DictCreateDTO, DictUpdateDTO, DictVO, DictPageQueryDTO, DictStatusDTO>
         implements DictService {
 
-    public DictServiceImpl(SysDictMapper mapper) {
+    private final SysDictItemMapper dictItemMapper;
+
+    public DictServiceImpl(SysDictMapper mapper, SysDictItemMapper dictItemMapper) {
         super(mapper);
+        this.dictItemMapper = dictItemMapper;
     }
 
     @Override
@@ -58,6 +63,8 @@ public class DictServiceImpl
                 .name(entity.getName())
                 .status(entity.getStatus())
                 .remark(entity.getRemark())
+                .createTime(entity.getCreateTime())
+                .updateTime(entity.getUpdateTime())
                 .build();
     }
 
@@ -78,6 +85,15 @@ public class DictServiceImpl
 
     @Override
     public void delete(Long id) {
+        SysDict dict = mapper.selectById(id);
+        if (dict == null) {
+            return;
+        }
+        Long itemCount = dictItemMapper.selectCount(
+                new LambdaQueryWrapper<SysDictItem>().eq(SysDictItem::getDictCode, dict.getCode()));
+        if (itemCount > 0) {
+            throw new BizException(ErrorCode.BIZ_ERROR, "字典下存在字典项，不允许删除");
+        }
         mapper.deleteById(id);
     }
 

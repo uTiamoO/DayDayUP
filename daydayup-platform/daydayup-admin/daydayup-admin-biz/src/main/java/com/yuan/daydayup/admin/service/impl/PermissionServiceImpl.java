@@ -72,6 +72,8 @@ public class PermissionServiceImpl
                 .sort(entity.getSort())
                 .status(entity.getStatus())
                 .remark(entity.getRemark())
+                .createTime(entity.getCreateTime())
+                .updateTime(entity.getUpdateTime())
                 .build();
     }
 

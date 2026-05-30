@@ -3,6 +3,7 @@ package com.yuan.daydayup.admin.service;
 import com.yuan.daydayup.admin.dto.DictCreateDTO;
 import com.yuan.daydayup.admin.dto.DictUpdateDTO;
 import com.yuan.daydayup.admin.entity.SysDict;
+import com.yuan.daydayup.admin.mapper.SysDictItemMapper;
 import com.yuan.daydayup.admin.mapper.SysDictMapper;
 import com.yuan.daydayup.admin.service.impl.DictServiceImpl;
 import com.yuan.daydayup.admin.vo.DictVO;
@@ -20,12 +21,14 @@ import static org.mockito.Mockito.when;
 class DictServiceImplTest {
 
     private SysDictMapper mapper;
+    private SysDictItemMapper dictItemMapper;
     private DictServiceImpl service;
 
     @BeforeEach
     void setUp() {
         mapper = mock(SysDictMapper.class);
-        service = new DictServiceImpl(mapper);
+        dictItemMapper = mock(SysDictItemMapper.class);
+        service = new DictServiceImpl(mapper, dictItemMapper);
     }
 
     @Test
@@ -79,11 +82,31 @@ class DictServiceImplTest {
     }
 
     @Test
-    void shouldDeleteDict() {
+    void shouldDeleteDictWhenNoItems() {
+        SysDict dict = new SysDict();
+        dict.setId(1L);
+        dict.setCode("gender");
+
+        when(mapper.selectById(1L)).thenReturn(dict);
+        when(dictItemMapper.selectCount(any())).thenReturn(0L);
         when(mapper.deleteById(1L)).thenReturn(1);
 
         service.delete(1L);
 
         verify(mapper).deleteById(1L);
+    }
+
+    @Test
+    void shouldRejectDeleteWhenItemsExist() {
+        SysDict dict = new SysDict();
+        dict.setId(1L);
+        dict.setCode("gender");
+
+        when(mapper.selectById(1L)).thenReturn(dict);
+        when(dictItemMapper.selectCount(any())).thenReturn(3L);
+
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("字典下存在字典项，不允许删除");
     }
 }

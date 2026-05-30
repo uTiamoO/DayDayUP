@@ -3,6 +3,8 @@ package com.yuan.daydayup.admin.vo;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 public class MenuVO {
@@ -18,4 +20,6 @@ public class MenuVO {
     private Integer sort;
     private Integer visible;
     private Integer status;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }
