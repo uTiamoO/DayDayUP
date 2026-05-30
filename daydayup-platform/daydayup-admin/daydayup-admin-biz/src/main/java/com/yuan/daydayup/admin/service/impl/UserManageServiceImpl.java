@@ -12,12 +12,10 @@ import com.yuan.daydayup.admin.vo.UserDetailVO;
 import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
 import com.yuan.daydayup.common.mybatis.service.AbstractCrudService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-@Slf4j
 @Service
 public class UserManageServiceImpl
         extends AbstractCrudService<SysUserMapper, SysUser, Long, UserCreateDTO, UserUpdateDTO, UserDetailVO, UserPageQueryDTO, UserStatusDTO>

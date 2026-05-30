@@ -15,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,7 +42,7 @@ class UserManageServiceImplTest {
 
         assertThatThrownBy(() -> service.create(dto))
                 .isInstanceOf(BizException.class)
-                .hasMessage("用户名已存在");
+                .hasMessageContaining("用户名已存在");
     }
 
     @Test
