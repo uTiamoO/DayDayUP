@@ -255,6 +255,45 @@ VALUES
     (4, 'social:*',    '社交模块全部权限', 'API', 4, 1, NOW(), NOW()),
     (5, 'social:read', '社交-只读',       'API', 5, 1, NOW(), NOW());
 
+-- 细粒度管理后台权限（供后续角色授权使用，不绑定超级管理员）
+INSERT INTO `sys_permission` (`id`, `code`, `name`, `type`, `sort`, `status`, `create_time`, `update_time`)
+VALUES
+    (1001, 'admin:user:list', '用户-列表', 'API', 1001, 1, NOW(), NOW()),
+    (1002, 'admin:user:detail', '用户-详情', 'API', 1002, 1, NOW(), NOW()),
+    (1003, 'admin:user:create', '用户-新增', 'API', 1003, 1, NOW(), NOW()),
+    (1004, 'admin:user:update', '用户-修改', 'API', 1004, 1, NOW(), NOW()),
+    (1005, 'admin:user:status', '用户-启停用', 'API', 1005, 1, NOW(), NOW()),
+    (1011, 'admin:role:list', '角色-列表', 'API', 1011, 1, NOW(), NOW()),
+    (1012, 'admin:role:detail', '角色-详情', 'API', 1012, 1, NOW(), NOW()),
+    (1013, 'admin:role:create', '角色-新增', 'API', 1013, 1, NOW(), NOW()),
+    (1014, 'admin:role:update', '角色-修改', 'API', 1014, 1, NOW(), NOW()),
+    (1015, 'admin:role:status', '角色-启停用', 'API', 1015, 1, NOW(), NOW()),
+    (1021, 'admin:permission:list', '权限-列表', 'API', 1021, 1, NOW(), NOW()),
+    (1022, 'admin:permission:detail', '权限-详情', 'API', 1022, 1, NOW(), NOW()),
+    (1023, 'admin:permission:create', '权限-新增', 'API', 1023, 1, NOW(), NOW()),
+    (1024, 'admin:permission:update', '权限-修改', 'API', 1024, 1, NOW(), NOW()),
+    (1025, 'admin:permission:status', '权限-启停用', 'API', 1025, 1, NOW(), NOW()),
+    (1031, 'admin:menu:list', '菜单-列表', 'API', 1031, 1, NOW(), NOW()),
+    (1032, 'admin:menu:detail', '菜单-详情', 'API', 1032, 1, NOW(), NOW()),
+    (1033, 'admin:menu:create', '菜单-新增', 'API', 1033, 1, NOW(), NOW()),
+    (1034, 'admin:menu:update', '菜单-修改', 'API', 1034, 1, NOW(), NOW()),
+    (1035, 'admin:menu:status', '菜单-启停用', 'API', 1035, 1, NOW(), NOW()),
+    (1036, 'admin:menu:delete', '菜单-删除', 'API', 1036, 1, NOW(), NOW()),
+    (1041, 'admin:dict:list', '字典-列表', 'API', 1041, 1, NOW(), NOW()),
+    (1042, 'admin:dict:detail', '字典-详情', 'API', 1042, 1, NOW(), NOW()),
+    (1043, 'admin:dict:create', '字典-新增', 'API', 1043, 1, NOW(), NOW()),
+    (1044, 'admin:dict:update', '字典-修改', 'API', 1044, 1, NOW(), NOW()),
+    (1045, 'admin:dict:status', '字典-启停用', 'API', 1045, 1, NOW(), NOW()),
+    (1046, 'admin:dict:delete', '字典-删除', 'API', 1046, 1, NOW(), NOW()),
+    (1051, 'admin:dict-item:list', '字典项-列表', 'API', 1051, 1, NOW(), NOW()),
+    (1052, 'admin:dict-item:detail', '字典项-详情', 'API', 1052, 1, NOW(), NOW()),
+    (1053, 'admin:dict-item:create', '字典项-新增', 'API', 1053, 1, NOW(), NOW()),
+    (1054, 'admin:dict-item:update', '字典项-修改', 'API', 1054, 1, NOW(), NOW()),
+    (1055, 'admin:dict-item:status', '字典项-启停用', 'API', 1055, 1, NOW(), NOW()),
+    (1056, 'admin:dict-item:delete', '字典项-删除', 'API', 1056, 1, NOW(), NOW()),
+    (1061, 'admin:oper-log:list', '操作日志-列表', 'API', 1061, 1, NOW(), NOW()),
+    (1062, 'admin:oper-log:detail', '操作日志-详情', 'API', 1062, 1, NOW(), NOW());
+
 -- 角色-权限关联：超级管理员 → admin:*, game:*, social:*
 INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_time`, `update_time`)
 VALUES
