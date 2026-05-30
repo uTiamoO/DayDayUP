@@ -1,6 +1,7 @@
 package com.yuan.daydayup.common.security.config;
 
 import com.yuan.daydayup.common.security.permission.WildcardPermissionEvaluator;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
@@ -29,6 +30,7 @@ import org.springframework.security.access.expression.method.MethodSecurityExpre
 public class MethodSecurityConfig {
 
     @Bean
+    @ConditionalOnMissingBean(WildcardPermissionEvaluator.class)
     public WildcardPermissionEvaluator wildcardPermissionEvaluator() {
         return new WildcardPermissionEvaluator();
     }
