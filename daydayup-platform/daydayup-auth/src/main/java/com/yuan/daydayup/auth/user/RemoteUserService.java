@@ -28,6 +28,7 @@ public class RemoteUserService {
                 .username(vo.getUsername())
                 .password(vo.getPassword())
                 .authorities(vo.getAuthorities())
+                .status(vo.getStatus())
                 .build());
     }
 }

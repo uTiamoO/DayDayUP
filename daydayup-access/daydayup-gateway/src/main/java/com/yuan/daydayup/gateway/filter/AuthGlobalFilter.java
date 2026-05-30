@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
@@ -50,13 +51,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private final ReactiveJwtDecoder jwtDecoder;
     private final GatewaySecurityProperties properties;
     private final ObjectMapper objectMapper;
+    private final ReactiveStringRedisTemplate redisTemplate;
 
     public AuthGlobalFilter(ReactiveJwtDecoder jwtDecoder,
                             GatewaySecurityProperties properties,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            ReactiveStringRedisTemplate redisTemplate) {
         this.jwtDecoder = jwtDecoder;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -76,7 +80,20 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String token = authorization.substring(SecurityConstants.BEARER_PREFIX.length()).trim();
 
         return jwtDecoder.decode(token)
-                .flatMap(jwt -> chain.filter(mutateExchange(exchange, jwt)))
+                .flatMap(jwt -> {
+                    String jti = jwt.getId();
+                    if (jti != null) {
+                        String blacklistKey = "daydayup:auth:token:blacklist:" + jti;
+                        return redisTemplate.hasKey(blacklistKey)
+                                .flatMap(isBlacklisted -> {
+                                    if (Boolean.TRUE.equals(isBlacklisted)) {
+                                        return reject(exchange, ErrorCode.TOKEN_BLACKLISTED);
+                                    }
+                                    return chain.filter(mutateExchange(exchange, jwt));
+                                });
+                    }
+                    return chain.filter(mutateExchange(exchange, jwt));
+                })
                 .onErrorResume(ex -> {
                     log.warn("JWT 校验失败：{}", ex.getMessage());
                     return reject(exchange, ErrorCode.TOKEN_INVALID);

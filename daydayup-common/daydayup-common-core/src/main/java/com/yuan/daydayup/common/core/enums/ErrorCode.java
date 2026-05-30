@@ -43,7 +43,9 @@ public enum ErrorCode {
     TOKEN_INVALID(20001, "令牌无效"),
     TOKEN_EXPIRED(20002, "令牌已过期"),
     LOGIN_FAILED(20003, "用户名或密码错误"),
-    ACCOUNT_DISABLED(20004, "账号已被禁用");
+    ACCOUNT_DISABLED(20004, "账号已被禁用"),
+    LOGIN_LOCKED(20005, "登录已被锁定，请稍后再试"),
+    TOKEN_BLACKLISTED(20006, "令牌已失效");
 
     private final Integer code;
     private final String message;
