@@ -72,3 +72,9 @@ deploy/**/data/
 deploy/**/*-logs/
 deploy/**/logs/
 deploy/**/conf/dynamic/
+
+# ============ AI ============
+.claude
+.agent
+.cursor
+.trae

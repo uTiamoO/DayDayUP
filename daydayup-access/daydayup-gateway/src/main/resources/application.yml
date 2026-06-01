@@ -63,7 +63,10 @@ daydayup:
   gateway:
     jwk-set-uri: ${JWK_SET_URI:http://127.0.0.1:9200/.well-known/jwks.json}
     permit-paths:
-      - /auth/**
+      # 仅放行真正无需登录态的端点：登录、刷新、公钥、文档、健康检查
+      - /auth/oauth2/token
+      - /auth/oauth2/refresh
+      - /auth/.well-known/jwks.json
       - /*/v3/api-docs/**
       - /actuator/**
 

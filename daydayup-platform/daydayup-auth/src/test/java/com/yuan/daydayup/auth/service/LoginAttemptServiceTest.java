@@ -3,12 +3,17 @@ package com.yuan.daydayup.auth.service;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
-import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class LoginAttemptServiceTest {
 
@@ -35,16 +40,17 @@ class LoginAttemptServiceTest {
     }
 
     @Test
-    void shouldIncrementFailureCount() {
+    void shouldIncrementFailureCountAtomically() {
         StringRedisTemplate redis = mock(StringRedisTemplate.class);
-        ValueOperations<String, String> ops = mock(ValueOperations.class);
-        when(redis.opsForValue()).thenReturn(ops);
-        when(ops.increment(anyString())).thenReturn(1L);
         LoginAttemptService service = new LoginAttemptService(redis);
 
         service.recordFailure("admin");
-        verify(ops).increment(startsWith("daydayup:auth:login:fail:"));
-        verify(redis).expire(anyString(), eq(Duration.ofSeconds(900)));
+
+        // 计数与过期通过单条 Lua 脚本原子执行，900 秒为锁定时长参数
+        verify(redis).execute(
+                any(RedisScript.class),
+                eq(List.of("daydayup:auth:login:fail:admin")),
+                eq("900"));
     }
 
     @Test

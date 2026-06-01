@@ -1,16 +1,18 @@
 package com.yuan.daydayup.auth.controller;
 
-import com.yuan.daydayup.auth.entity.LoginHistory;
-import com.yuan.daydayup.auth.mapper.LoginHistoryMapper;
 import com.yuan.daydayup.auth.service.JwtTokenService;
 import com.yuan.daydayup.auth.service.LoginAttemptService;
-import com.yuan.daydayup.auth.service.TokenBlacklistService;
+import com.yuan.daydayup.auth.service.LoginHistoryService;
 import com.yuan.daydayup.auth.user.RemoteUserService;
 import com.yuan.daydayup.auth.user.SimpleUser;
 import com.yuan.daydayup.common.core.constant.SecurityConstants;
 import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
 import com.yuan.daydayup.common.core.result.R;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -22,8 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-
 /**
  * 登录接口
  *
@@ -33,75 +33,87 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/oauth2")
 @Validated
+@Tag(name = "认证登录", description = "登录、刷新、登出、令牌吊销")
 public class LoginController {
+
+    /** 吊销端点要求的管理权限码 */
+    private static final String ADMIN_AUTHORITY = "admin:*";
 
     private final RemoteUserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService tokenService;
     private final LoginAttemptService loginAttemptService;
-    private final LoginHistoryMapper loginHistoryMapper;
+    private final LoginHistoryService loginHistoryService;
 
     public LoginController(RemoteUserService userService,
                            PasswordEncoder passwordEncoder,
                            JwtTokenService tokenService,
                            LoginAttemptService loginAttemptService,
-                           LoginHistoryMapper loginHistoryMapper) {
+                           LoginHistoryService loginHistoryService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.loginAttemptService = loginAttemptService;
-        this.loginHistoryMapper = loginHistoryMapper;
+        this.loginHistoryService = loginHistoryService;
     }
 
     @PostMapping("/token")
+    @Operation(summary = "账号密码登录",
+            description = "校验账号密码，成功后签发 access_token 与 refresh_token；连续失败 5 次锁定 15 分钟。")
+    @SecurityRequirements
     public R<JwtTokenService.TokenResult> login(@RequestBody @Validated LoginRequest request,
                                                  HttpServletRequest httpRequest) {
         String username = request.getUsername();
-        String clientIp = getClientIp(httpRequest);
+        String clientIp = loginHistoryService.getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         // 1. 检查是否被锁定
         if (loginAttemptService.isLocked(username)) {
-            recordLoginHistory(null, username, clientIp, userAgent, false, "LOGIN_LOCKED");
+            loginHistoryService.record(null, username, false, "LOGIN_LOCKED", httpRequest);
             throw new BizException(ErrorCode.LOGIN_LOCKED);
         }
 
         // 2. 查用户
-        SimpleUser user = userService.findByUsername(username)
-                .orElse(null);
+        SimpleUser user = userService.findByUsername(username).orElse(null);
         if (user == null) {
             loginAttemptService.recordFailure(username);
-            recordLoginHistory(null, username, clientIp, userAgent, false, "USER_NOT_FOUND");
+            loginHistoryService.record(null, username, false, "USER_NOT_FOUND", httpRequest);
             throw new BizException(ErrorCode.LOGIN_FAILED);
         }
 
         // 3. 检查用户状态
         if (user.getStatus() == null || user.getStatus() != 1) {
             loginAttemptService.recordFailure(username);
-            recordLoginHistory(user.getUserId(), username, clientIp, userAgent, false, "ACCOUNT_DISABLED");
+            loginHistoryService.record(user.getUserId(), username, false, "ACCOUNT_DISABLED", httpRequest);
             throw new BizException(ErrorCode.LOGIN_FAILED);
         }
 
         // 4. 校验密码
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             loginAttemptService.recordFailure(username);
-            recordLoginHistory(user.getUserId(), username, clientIp, userAgent, false, "BAD_PASSWORD");
+            loginHistoryService.record(user.getUserId(), username, false, "BAD_PASSWORD", httpRequest);
             throw new BizException(ErrorCode.LOGIN_FAILED);
         }
 
-        // 5. 登录成功
+        // 5. 登录成功：清除失败计数、记录历史、回写最后登录信息
         loginAttemptService.clearFailures(username);
-        recordLoginHistory(user.getUserId(), username, clientIp, userAgent, true, null);
+        loginHistoryService.record(user.getUserId(), username, true, null, httpRequest);
+        userService.updateLoginInfo(user.getUserId(), clientIp);
 
         return R.ok(tokenService.issue(user, clientIp, userAgent));
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "刷新令牌",
+            description = "用 refresh_token 换取新的 access_token 与 refresh_token，旧 refresh_token 立即失效。")
+    @SecurityRequirements
     public R<JwtTokenService.TokenResult> refresh(@RequestBody @Validated RefreshRequest request) {
         return R.ok(tokenService.refresh(request.getRefreshToken()));
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "登出",
+            description = "将当前 access_token 加入黑名单并吊销该用户全部 refresh_token；需在 Authorization 头携带 Bearer token。")
     public R<Void> logout(HttpServletRequest httpRequest) {
         String authorization = httpRequest.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith(SecurityConstants.BEARER_PREFIX)) {
@@ -112,50 +124,56 @@ public class LoginController {
         return R.ok();
     }
 
+    /**
+     * 管理员强制吊销指定用户的全部 refresh_token。
+     *
+     * <p>需 {@code admin:*} 权限（校验网关透传的 authorities 头）。网关已对本端点
+     * 强制 JWT 校验，此处再校验权限，形成纵深防御。</p>
+     */
     @PostMapping("/revoke/{userId}")
-    public R<Void> revoke(@PathVariable Long userId) {
+    @Operation(summary = "吊销指定用户全部令牌", description = "管理员强制下线指定用户，需 admin:* 权限。")
+    public R<Void> revoke(@PathVariable Long userId, HttpServletRequest httpRequest) {
+        requireAdmin(httpRequest);
         tokenService.revokeAllForUser(userId);
         return R.ok();
     }
 
-    private void recordLoginHistory(Long userId, String username, String clientIp,
-                                     String userAgent, boolean success, String failureReason) {
-        LoginHistory history = new LoginHistory();
-        history.setUserId(userId);
-        history.setUsername(username);
-        history.setLoginAt(LocalDateTime.now());
-        history.setClientIp(clientIp);
-        history.setUserAgent(userAgent);
-        history.setSuccess(success ? 1 : 0);
-        history.setFailureReason(failureReason);
-        loginHistoryMapper.insert(history);
+    /** 校验当前请求是否具备管理员权限（读取网关透传的 authorities 头），不具备则抛 403 */
+    private void requireAdmin(HttpServletRequest httpRequest) {
+        String authorities = httpRequest.getHeader(SecurityConstants.CLAIM_AUTHORITIES);
+        if (authorities == null || !hasAdminAuthority(authorities)) {
+            throw new BizException(ErrorCode.FORBIDDEN);
+        }
     }
 
-    private static String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isBlank()) {
-            return ip.split(",")[0].trim();
+    /** 判断逗号分隔的权限串中是否包含管理权限码 {@link #ADMIN_AUTHORITY} */
+    private static boolean hasAdminAuthority(String authoritiesHeader) {
+        for (String authority : authoritiesHeader.split(",")) {
+            if (ADMIN_AUTHORITY.equals(authority.trim())) {
+                return true;
+            }
         }
-        ip = request.getHeader("X-Real-IP");
-        if (ip != null && !ip.isBlank()) {
-            return ip;
-        }
-        return request.getRemoteAddr();
+        return false;
     }
 
     @Data
+    @Schema(description = "登录请求")
     public static class LoginRequest {
 
+        @Schema(description = "用户名", example = "admin")
         @NotBlank(message = "用户名不能为空")
         private String username;
 
+        @Schema(description = "密码", example = "123456")
         @NotBlank(message = "密码不能为空")
         private String password;
     }
 
     @Data
+    @Schema(description = "刷新令牌请求")
     public static class RefreshRequest {
 
+        @Schema(description = "刷新令牌")
         @NotBlank(message = "refreshToken 不能为空")
         private String refreshToken;
     }

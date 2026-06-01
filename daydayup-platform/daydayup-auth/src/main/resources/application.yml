@@ -46,6 +46,17 @@ daydayup:
   auth:
     access-token-ttl-seconds: 7200
     refresh-token-ttl-seconds: 604800
+  swagger:
+    title: DayDayUP Auth API
+    description: 认证中心接口文档
+    version: 0.1.0
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
 management:
   endpoints:
     web:

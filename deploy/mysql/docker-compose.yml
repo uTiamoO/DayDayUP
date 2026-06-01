@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.3
+    container_name: daydayup-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-23336}:3306"
+    volumes:
+      - ./data:/var/lib/mysql
+      - ../../sql:/docker-entrypoint-initdb.d:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --max-connections=500
+    networks:
+      - daydayup
+
+networks:
+  daydayup:
+    driver: bridge

@@ -1,0 +1,37 @@
+services:
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: nacos
+    restart: unless-stopped
+    
+    environment:
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql_inner
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: ${MYSQL_DATABASE}
+      MYSQL_SERVICE_USER: ${MYSQL_USER}
+      MYSQL_SERVICE_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_SERVICE_DB_PARAM: characterEncoding=utf8&connectTimeout=2000&socketTimeout=5000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai
+      # 鉴权（必须开启，密钥见 .env）
+      NACOS_AUTH_ENABLE: ${NACOS_AUTH_ENABLE}
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN}
+      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY}
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE}
+      # JVM（4G 机器示例，2G 机器请下调）
+      JVM_XMS: ${JVM_XMS:-512m}
+      JVM_XMX: ${JVM_XMX:-1g}
+      JVM_XMN: ${JVM_XMN:-256m}
+      TZ: Asia/Shanghai
+    ports:
+      - "18848:8848"   # HTTP / 控制台
+      - "19848:9848"   # 客户端 gRPC（SCA 2.x 必须）
+      - "19849:9849"   # 集群 raft，单机也开避免警告
+    volumes:
+      - ./nacos-logs:/home/nacos/logs
+    networks: 
+      - 1panel-network
+
+networks:
+    1panel-network:
+        external: true

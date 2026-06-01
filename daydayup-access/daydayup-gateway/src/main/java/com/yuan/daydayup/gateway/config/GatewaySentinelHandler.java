@@ -30,16 +30,12 @@ public class GatewaySentinelHandler implements BlockRequestHandler {
 
     @Override
     public Mono<ServerResponse> handleRequest(ServerWebExchange exchange, Throwable ex) {
-        String message;
-        if (ex instanceof FlowException) {
-            message = "请求过于频繁，请稍后再试";
-        } else if (ex instanceof DegradeException) {
-            message = "服务降级中";
-        } else if (ex instanceof ParamFlowException) {
-            message = "热点参数限流";
-        } else {
-            message = "请求被网关拦截：" + ex.getClass().getSimpleName();
-        }
+        String message = switch (ex) {
+            case FlowException flowException -> "请求过于频繁，请稍后再试";
+            case DegradeException degradeException -> "服务降级中";
+            case ParamFlowException paramFlowException -> "热点参数限流";
+            default -> "请求被网关拦截：" + ex.getClass().getSimpleName();
+        };
 
         R<Void> body = R.fail(ErrorCode.SERVICE_UNAVAILABLE.getCode(), message);
         return ServerResponse.status(ErrorCode.SERVICE_UNAVAILABLE.getCode())

@@ -68,10 +68,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
 
+        // 1. 白名单路径（登录 / 刷新 / 公钥 / 文档等）直接放行，不校验 JWT
         if (isPermitPath(path)) {
             return chain.filter(exchange);
         }
 
+        // 2. 取 Authorization 头并校验 Bearer 前缀，缺失则按「未登录」处理
         String authorization = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(SecurityConstants.BEARER_PREFIX)) {
             return reject(exchange, ErrorCode.UNAUTHORIZED);
@@ -79,21 +81,26 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String token = authorization.substring(SecurityConstants.BEARER_PREFIX.length()).trim();
 
+        // 3. 异步验签：decode 内部完成签名与时间（exp/nbf）校验，任何失败都会进入 onErrorResume
         return jwtDecoder.decode(token)
                 .flatMap(jwt -> {
+                    // 4. 验签通过后查黑名单：命中说明该 token 已被登出 / 吊销，拒绝放行
                     String jti = jwt.getId();
                     if (jti != null) {
-                        String blacklistKey = "daydayup:auth:token:blacklist:" + jti;
+                        String blacklistKey = SecurityConstants.TOKEN_BLACKLIST_KEY_PREFIX + jti;
                         return redisTemplate.hasKey(blacklistKey)
                                 .flatMap(isBlacklisted -> {
                                     if (Boolean.TRUE.equals(isBlacklisted)) {
                                         return reject(exchange, ErrorCode.TOKEN_BLACKLISTED);
                                     }
+                                    // 5. 全部校验通过：把用户上下文写入下游请求头后放行
                                     return chain.filter(mutateExchange(exchange, jwt));
                                 });
                     }
+                    // 无 jti 的 token 无法做黑名单校验，仅写入上下文后放行
                     return chain.filter(mutateExchange(exchange, jwt));
                 })
+                // 6. 验签异常（签名错误 / 已过期 / 格式非法）统一返回「令牌无效」
                 .onErrorResume(ex -> {
                     log.warn("JWT 校验失败：{}", ex.getMessage());
                     return reject(exchange, ErrorCode.TOKEN_INVALID);

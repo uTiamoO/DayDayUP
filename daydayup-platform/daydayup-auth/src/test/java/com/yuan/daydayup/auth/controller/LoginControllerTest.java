@@ -1,11 +1,11 @@
 package com.yuan.daydayup.auth.controller;
 
-import com.yuan.daydayup.auth.entity.LoginHistory;
-import com.yuan.daydayup.auth.mapper.LoginHistoryMapper;
 import com.yuan.daydayup.auth.service.JwtTokenService;
 import com.yuan.daydayup.auth.service.LoginAttemptService;
+import com.yuan.daydayup.auth.service.LoginHistoryService;
 import com.yuan.daydayup.auth.user.RemoteUserService;
 import com.yuan.daydayup.auth.user.SimpleUser;
+import com.yuan.daydayup.common.core.constant.SecurityConstants;
 import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +19,11 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,7 +33,7 @@ class LoginControllerTest {
     private PasswordEncoder passwordEncoder;
     private JwtTokenService tokenService;
     private LoginAttemptService loginAttemptService;
-    private LoginHistoryMapper loginHistoryMapper;
+    private LoginHistoryService loginHistoryService;
     private LoginController controller;
 
     @BeforeEach
@@ -38,9 +42,9 @@ class LoginControllerTest {
         passwordEncoder = mock(PasswordEncoder.class);
         tokenService = mock(JwtTokenService.class);
         loginAttemptService = mock(LoginAttemptService.class);
-        loginHistoryMapper = mock(LoginHistoryMapper.class);
+        loginHistoryService = mock(LoginHistoryService.class);
         controller = new LoginController(userService, passwordEncoder, tokenService,
-                loginAttemptService, loginHistoryMapper);
+                loginAttemptService, loginHistoryService);
     }
 
     private LoginController.LoginRequest request(String username, String password) {
@@ -102,7 +106,7 @@ class LoginControllerTest {
     }
 
     @Test
-    void shouldClearFailuresOnSuccess() {
+    void shouldClearFailuresAndUpdateLoginInfoOnSuccess() {
         when(loginAttemptService.isLocked("admin")).thenReturn(false);
         when(userService.findByUsername("admin")).thenReturn(Optional.of(
                 SimpleUser.builder().userId(1L).username("admin").password("encoded")
@@ -114,8 +118,8 @@ class LoginControllerTest {
         controller.login(request("admin", "admin"), new MockHttpServletRequest());
 
         verify(loginAttemptService).clearFailures("admin");
-        verify(loginHistoryMapper).insert(org.mockito.ArgumentMatchers.<LoginHistory>argThat(
-                h -> h.getSuccess() == 1));
+        verify(loginHistoryService).record(eq(1L), eq("admin"), eq(true), isNull(), any());
+        verify(userService).updateLoginInfo(eq(1L), any());
     }
 
     @Test
@@ -124,7 +128,39 @@ class LoginControllerTest {
 
         assertThatThrownBy(() -> controller.login(request("admin", "admin"), new MockHttpServletRequest()))
                 .isInstanceOf(BizException.class);
-        verify(loginHistoryMapper).insert(org.mockito.ArgumentMatchers.<LoginHistory>argThat(
-                h -> "LOGIN_LOCKED".equals(h.getFailureReason()) && h.getUserId() == null));
+        verify(loginHistoryService).record(isNull(), eq("admin"), eq(false), eq("LOGIN_LOCKED"), any());
+    }
+
+    @Test
+    void shouldRejectRevokeWithoutAdminAuthority() {
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
+
+        assertThatThrownBy(() -> controller.revoke(1L, httpRequest))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getCode())
+                        .isEqualTo(ErrorCode.FORBIDDEN.getCode()));
+        verify(tokenService, never()).revokeAllForUser(anyLong());
+    }
+
+    @Test
+    void shouldRejectRevokeWithNonAdminAuthority() {
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
+        httpRequest.addHeader(SecurityConstants.CLAIM_AUTHORITIES, "user:read,order:write");
+
+        assertThatThrownBy(() -> controller.revoke(1L, httpRequest))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> assertThat(((BizException) ex).getCode())
+                        .isEqualTo(ErrorCode.FORBIDDEN.getCode()));
+        verify(tokenService, never()).revokeAllForUser(anyLong());
+    }
+
+    @Test
+    void shouldAllowRevokeWithAdminAuthority() {
+        MockHttpServletRequest httpRequest = new MockHttpServletRequest();
+        httpRequest.addHeader(SecurityConstants.CLAIM_AUTHORITIES, "user:read,admin:*");
+
+        controller.revoke(1L, httpRequest);
+
+        verify(tokenService).revokeAllForUser(1L);
     }
 }
