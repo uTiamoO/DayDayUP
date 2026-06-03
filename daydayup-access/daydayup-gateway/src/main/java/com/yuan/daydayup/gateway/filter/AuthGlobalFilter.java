@@ -217,7 +217,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     private ServerWebExchange mutateExchange(ServerWebExchange exchange, Jwt jwt) {
         Long userId = readLong(jwt, SecurityConstants.CLAIM_USER_ID);
-        String username = jwt.getClaimAsString(SecurityConstants.CLAIM_USERNAME);
+        String username = jwt.getSubject();
         Collection<String> authorities = readAuthorities(jwt);
 
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
