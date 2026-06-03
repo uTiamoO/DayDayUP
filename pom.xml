@@ -217,6 +217,11 @@
             <!-- ================= 业务模块 API ================= -->
             <dependency>
                 <groupId>com.yuan</groupId>
+                <artifactId>daydayup-auth-api</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
                 <artifactId>daydayup-admin-api</artifactId>
                 <version>${daydayup.version}</version>
             </dependency>

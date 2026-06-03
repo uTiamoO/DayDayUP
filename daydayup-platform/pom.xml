@@ -16,6 +16,7 @@
 
     <modules>
         <module>daydayup-auth</module>
+        <module>daydayup-auth-api</module>
         <module>daydayup-admin</module>
         <module>daydayup-monitor</module>
         <module>daydayup-job</module>
