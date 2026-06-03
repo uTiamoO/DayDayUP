@@ -121,8 +121,8 @@ public class PasswordAuthenticationProvider implements AuthenticationProvider {
                     .tokenType(OAuth2TokenType.REFRESH_TOKEN)
                     .build();
             OAuth2Token generatedRefreshToken = tokenGenerator.generate(refreshTokenContext);
-            if (generatedRefreshToken != null) {
-                refreshToken = (OAuth2RefreshToken) generatedRefreshToken;
+            if (generatedRefreshToken instanceof OAuth2RefreshToken rt) {
+                refreshToken = rt;
                 authorizationBuilder.refreshToken(refreshToken);
             }
         }
