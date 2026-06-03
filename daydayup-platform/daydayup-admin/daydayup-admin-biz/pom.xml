@@ -20,6 +20,10 @@
         </dependency>
         <dependency>
             <groupId>com.yuan</groupId>
+            <artifactId>daydayup-auth-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
             <artifactId>daydayup-common-web</artifactId>
         </dependency>
         <dependency>

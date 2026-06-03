@@ -1,11 +1,11 @@
 package com.yuan.daydayup.admin.controller;
 
-import com.yuan.daydayup.admin.dto.UserCreateDTO;
-import com.yuan.daydayup.admin.dto.UserPageQueryDTO;
-import com.yuan.daydayup.admin.dto.UserStatusDTO;
-import com.yuan.daydayup.admin.dto.UserUpdateDTO;
+import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.UserPageQuery;
+import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
+import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
+import com.yuan.daydayup.auth.api.vo.UserDetailVO;
 import com.yuan.daydayup.admin.service.UserManageService;
-import com.yuan.daydayup.admin.vo.UserDetailVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.core.result.R;
 import jakarta.validation.Valid;
@@ -29,7 +29,7 @@ public class UserManageController {
 
     @GetMapping("/page")
     @PreAuthorize("hasPermission(null, 'admin:user:list')")
-    public R<PageResult<UserDetailVO>> page(UserPageQueryDTO query) {
+    public R<PageResult<UserDetailVO>> page(UserPageQuery query) {
         return R.ok(userManageService.page(query));
     }
 

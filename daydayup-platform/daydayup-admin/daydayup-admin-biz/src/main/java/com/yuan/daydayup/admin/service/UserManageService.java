@@ -1,16 +1,26 @@
 package com.yuan.daydayup.admin.service;
 
-import com.yuan.daydayup.admin.dto.UserCreateDTO;
-import com.yuan.daydayup.admin.dto.UserPageQueryDTO;
-import com.yuan.daydayup.admin.dto.UserStatusDTO;
-import com.yuan.daydayup.admin.dto.UserUpdateDTO;
-import com.yuan.daydayup.admin.vo.UserDetailVO;
-import com.yuan.daydayup.common.mybatis.service.BaseCrudService;
+import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.UserPageQuery;
+import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
+import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
+import com.yuan.daydayup.auth.api.vo.UserDetailVO;
+import com.yuan.daydayup.common.core.page.PageResult;
 
-public interface UserManageService extends BaseCrudService<Long, UserCreateDTO, UserUpdateDTO, UserDetailVO, UserPageQueryDTO, UserStatusDTO> {
+/**
+ * 用户管理服务接口（admin-biz 层，委托给 auth 服务）
+ */
+public interface UserManageService {
 
-    /**
-     * 更新用户最后登录信息
-     */
+    PageResult<UserDetailVO> page(UserPageQuery query);
+
+    UserDetailVO detail(Long id);
+
+    UserDetailVO create(UserCreateDTO dto);
+
+    UserDetailVO update(Long id, UserUpdateDTO dto);
+
+    void changeStatus(Long id, UserStatusDTO dto);
+
     void updateLoginInfo(Long userId, String lastLoginIp);
 }
