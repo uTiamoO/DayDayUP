@@ -2,19 +2,24 @@ package com.yuan.daydayup.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * 认证中心安全配置
+ * 通用 SecurityFilterChain（Order=2）。
  *
- * <p>认证中心本身是无状态接口，所有端点放行（业务层在 Controller 内做凭证校验）。</p>
+ * <p>SAS 协议端点由 AuthorizationServerConfig 的 Chain（Order=1）接管。
+ * 本 Chain 处理其余端点：/login（登录页公开）、/api/**（需 Bearer 认证）、
+ * /swagger-ui/**（公开）。</p>
  */
 @Configuration(proxyBeanMethods = false)
+@EnableWebSecurity
 public class AuthSecurityConfig {
 
     @Bean
@@ -23,15 +28,19 @@ public class AuthSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain authSecurityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(reg -> reg.anyRequest().permitAll())
-                .build();
+    @Order(2)
+    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/login").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+
+        return http.build();
     }
 }
