@@ -41,11 +41,16 @@ spring:
           max-active: 16
           max-idle: 8
           min-idle: 0
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/init.sql
 
 daydayup:
   auth:
     access-token-ttl-seconds: 7200
     refresh-token-ttl-seconds: 604800
+    issuer-url: http://daydayup-auth:9200
     jwk:
       # 私钥加密主密码，生产环境请通过环境变量或 KMS 注入；所有实例必须相同
       master-password: ${JWK_MASTER_PASSWORD:daydayup-jwk-default}
