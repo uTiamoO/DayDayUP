@@ -166,3 +166,130 @@ VALUES
  'openid,profile,admin:*',
  '{"@class":"java.util.Collections$UnmodifiableMap","settings.client.require-proof-key":true,"settings.client.require-authorization-consent":false}',
  '{"@class":"java.util.Collections$UnmodifiableMap","settings.token.reuse-refresh-tokens":false,"settings.token.access-token-time-to-live":["java.time.Duration",7200.000000000],"settings.token.refresh-token-time-to-live":["java.time.Duration",604800.000000000],"settings.token.access-token-format":{"@class":"org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat","value":"self-contained"}}');
+
+-- ============================================================
+-- 身份表（从 daydayup_admin 迁入）
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `sys_user` (
+    `id`            BIGINT       NOT NULL COMMENT '主键（雪花）',
+    `username`      VARCHAR(64)  NOT NULL COMMENT '用户名',
+    `password`      VARCHAR(255) NOT NULL COMMENT 'BCrypt 密码哈希',
+    `nickname`      VARCHAR(64)  DEFAULT NULL COMMENT '昵称',
+    `email`         VARCHAR(128) DEFAULT NULL COMMENT '邮箱',
+    `mobile`        VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
+    `avatar`        VARCHAR(512) DEFAULT NULL COMMENT '头像 URL',
+    `status`        TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `last_login_at` DATETIME     DEFAULT NULL COMMENT '最近登录时间',
+    `last_login_ip` VARCHAR(45)  DEFAULT NULL COMMENT '最近登录 IP',
+    `remark`        VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    `create_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`     BIGINT       DEFAULT NULL,
+    `update_by`     BIGINT       DEFAULT NULL,
+    `deleted`       TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`),
+    KEY `idx_mobile` (`mobile`),
+    KEY `idx_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+
+CREATE TABLE IF NOT EXISTS `sys_role` (
+    `id`          BIGINT      NOT NULL,
+    `code`        VARCHAR(64) NOT NULL,
+    `name`        VARCHAR(64) NOT NULL,
+    `sort`        INT         NOT NULL DEFAULT 0,
+    `status`      TINYINT     NOT NULL DEFAULT 1,
+    `remark`      VARCHAR(255) DEFAULT NULL,
+    `create_time` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`   BIGINT      DEFAULT NULL,
+    `update_by`   BIGINT      DEFAULT NULL,
+    `deleted`     TINYINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
+
+CREATE TABLE IF NOT EXISTS `sys_user_role` (
+    `id`          BIGINT   NOT NULL,
+    `user_id`     BIGINT   NOT NULL,
+    `role_id`     BIGINT   NOT NULL,
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`   BIGINT   DEFAULT NULL,
+    `update_by`   BIGINT   DEFAULT NULL,
+    `deleted`     TINYINT  NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`),
+    KEY `idx_role_id` (`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户-角色关联';
+
+CREATE TABLE IF NOT EXISTS `sys_permission` (
+    `id`          BIGINT       NOT NULL,
+    `code`        VARCHAR(128) NOT NULL,
+    `name`        VARCHAR(64)  NOT NULL,
+    `type`        VARCHAR(20)  NOT NULL DEFAULT 'api',
+    `parent_id`   BIGINT       DEFAULT 0,
+    `path`        VARCHAR(255) DEFAULT NULL,
+    `sort`        INT          NOT NULL DEFAULT 0,
+    `status`      TINYINT      NOT NULL DEFAULT 1,
+    `remark`      VARCHAR(255) DEFAULT NULL,
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`   BIGINT       DEFAULT NULL,
+    `update_by`   BIGINT       DEFAULT NULL,
+    `deleted`     TINYINT      NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限定义';
+
+CREATE TABLE IF NOT EXISTS `sys_role_permission` (
+    `id`            BIGINT   NOT NULL,
+    `role_id`       BIGINT   NOT NULL,
+    `permission_id` BIGINT   NOT NULL,
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`     BIGINT   DEFAULT NULL,
+    `update_by`     BIGINT   DEFAULT NULL,
+    `deleted`       TINYINT  NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_role_perm` (`role_id`, `permission_id`),
+    KEY `idx_permission_id` (`permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色-权限关联';
+
+-- ============================================================
+-- 身份种子数据
+-- ============================================================
+
+INSERT IGNORE INTO `sys_user` (`id`, `username`, `password`, `nickname`, `status`, `create_by`)
+VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '超级管理员', 1, 1);
+
+INSERT IGNORE INTO `sys_role` (`id`, `code`, `name`, `sort`, `status`, `create_by`) VALUES
+(1, 'admin', '超级管理员', 1, 1, 1),
+(2, 'user',  '普通用户',   2, 1, 1);
+
+INSERT IGNORE INTO `sys_user_role` (`id`, `user_id`, `role_id`, `create_by`) VALUES
+(1, 1, 1, 1);
+
+INSERT IGNORE INTO `sys_permission` (`id`, `code`, `name`, `type`, `sort`, `status`, `create_by`) VALUES
+(1,  'admin:*',     '管理后台全部权限', 'api', 1,  1, 1),
+(2,  'game:*',      '游戏服务全部权限', 'api', 2,  1, 1),
+(3,  'game:play',   '游戏参与',         'api', 3,  1, 1),
+(4,  'social:*',    '社交服务全部权限', 'api', 4,  1, 1),
+(5,  'social:read', '社交只读',         'api', 5,  1, 1),
+(6,  'user:read',   '用户查询',         'api', 6,  1, 1),
+(7,  'user:write',  '用户管理',         'api', 7,  1, 1),
+(8,  'dict:read',   '字典查询',         'api', 8,  1, 1),
+(9,  'dict:write',  '字典管理',         'api', 9,  1, 1),
+(10, 'menu:read',   '菜单查询',         'api', 10, 1, 1),
+(11, 'menu:write',  '菜单管理',         'api', 11, 1, 1),
+(12, 'role:read',   '角色查询',         'api', 12, 1, 1),
+(13, 'role:write',  '角色管理',         'api', 13, 1, 1);
+
+INSERT IGNORE INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_by`) VALUES
+(1,  1, 1,  1), (2,  1, 2,  1), (3,  1, 3,  1), (4,  1, 4,  1),
+(5,  1, 5,  1), (6,  1, 6,  1), (7,  1, 7,  1), (8,  1, 8,  1),
+(9,  1, 9,  1), (10, 1, 10, 1), (11, 1, 11, 1), (12, 1, 12, 1),
+(13, 1, 13, 1),
+(14, 2, 3,  1), (15, 2, 5,  1), (16, 2, 6,  1),
+(17, 2, 8,  1), (18, 2, 10, 1);
