@@ -36,6 +36,10 @@
         </dependency>
         <dependency>
             <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-log</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
             <artifactId>daydayup-common-swagger</artifactId>
         </dependency>
         <dependency>

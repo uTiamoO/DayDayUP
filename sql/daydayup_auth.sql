@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `auth_jwk_key` (
     `algorithm`             VARCHAR(20)  NOT NULL DEFAULT 'RS256' COMMENT '算法',
     `public_key`            TEXT         NOT NULL COMMENT '公钥（PEM）',
     `private_key_encrypted` TEXT         NOT NULL COMMENT '私钥（加密后 PEM）',
-    `status`                VARCHAR(20)  NOT NULL DEFAULT 'active' COMMENT '状态：active / rotated / retired',
+    `status`                VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE / RETIRING / RETIRED',
     `activated_at`          DATETIME     DEFAULT NULL COMMENT '激活时间',
     `expires_at`            DATETIME     DEFAULT NULL COMMENT '过期时间',
     `create_time`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -46,6 +46,9 @@ daydayup:
   auth:
     access-token-ttl-seconds: 7200
     refresh-token-ttl-seconds: 604800
+    jwk:
+      # 私钥加密主密码，生产环境请通过环境变量或 KMS 注入；所有实例必须相同
+      master-password: ${JWK_MASTER_PASSWORD:daydayup-jwk-default}
   swagger:
     title: DayDayUP Auth API
     description: 认证中心接口文档
@@ -61,7 +64,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: '*'
+        # 生产环境仅暴露必要端点；本地调试可通过 Nacos 覆盖为 *
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always

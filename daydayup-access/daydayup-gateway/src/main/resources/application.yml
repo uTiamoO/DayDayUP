@@ -9,6 +9,18 @@ spring:
     import:
       - optional:nacos:${spring.application.name}.yaml
       - optional:nacos:daydayup-common.yaml
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:26379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 0
   cloud:
     nacos:
       discovery:
@@ -68,13 +80,14 @@ daydayup:
       - /auth/oauth2/refresh
       - /auth/.well-known/jwks.json
       - /*/v3/api-docs/**
-      - /actuator/**
+      - /actuator/health
 
 management:
   endpoints:
     web:
       exposure:
-        include: '*'
+        # 生产环境仅暴露必要端点；本地调试可通过 Nacos 覆盖为 *
+        include: health,info,metrics,prometheus
   tracing:
     sampling:
       probability: ${TRACE_SAMPLING:1.0}
