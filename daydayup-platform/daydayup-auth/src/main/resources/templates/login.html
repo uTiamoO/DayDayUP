@@ -24,6 +24,7 @@
     <div th:if="${param.error}" class="error">用户名或密码错误</div>
     <div th:if="${param.logout}" class="error" style="color:#27ae60">已成功登出</div>
     <form method="post" th:action="@{/login}">
+        <!--/* CSRF token 由 Spring Security 经 th:action 自动注入（见 AuthSecurityConfig 已启用的 CSRF）；若改用普通 action 需手动补 _csrf 隐藏域 */-->
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" id="username" name="username" required autofocus/>

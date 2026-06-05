@@ -153,7 +153,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         if (issuedAt == null) {
             return Mono.just(true);
         }
-        String key = "daydayup:auth:perm-changed:" + userId;
+        String key = SecurityConstants.PERM_CHANGED_KEY_PREFIX + userId;
         return redisTemplate.opsForValue().get(key)
                 .map(changedAtStr -> {
                     try {

@@ -28,9 +28,11 @@ public final class SecurityConstants {
      */
     public static final String TOKEN_BLACKLIST_KEY_PREFIX = "daydayup:auth:token:blacklist:";
 
-    /** OAuth2 客户端 ID（认证中心默认） */
-    public static final String DEFAULT_CLIENT_ID = "daydayup-client";
-
-    /** OAuth2 客户端密钥（认证中心默认，生产环境必须替换） */
-    public static final String DEFAULT_CLIENT_SECRET = "daydayup-secret";
+    /**
+     * 用户权限降级时间戳 Redis key 前缀。
+     *
+     * <p>auth 在用户停用/降权时写入降级时间（epoch 秒），网关（{@code AuthGlobalFilter}）
+     * 校验 JWT 的 iat 是否早于该时间，实现「降级即时生效」。两端必须共用此前缀。</p>
+     */
+    public static final String PERM_CHANGED_KEY_PREFIX = "daydayup:auth:perm-changed:";
 }

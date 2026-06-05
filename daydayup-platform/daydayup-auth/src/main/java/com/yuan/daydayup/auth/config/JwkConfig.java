@@ -37,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 /**
  * JWT 签发 / 校验配置
@@ -82,6 +83,7 @@ public class JwkConfig {
      */
     @PostConstruct
     public void init() {
+        warnIfDefaultMasterPassword();
         loadActiveKey();
     }
 
@@ -131,8 +133,9 @@ public class JwkConfig {
 
         // 需要生成密钥：通过 Redis 分布式锁互斥
         String lockKey = "daydayup:auth:jwk-lock";
+        String lockValue = UUID.randomUUID().toString();
         Boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(lockKey, "1", 10, TimeUnit.SECONDS);
+                .setIfAbsent(lockKey, lockValue, LOCK_TTL_SECONDS, TimeUnit.SECONDS);
 
         if (Boolean.TRUE.equals(locked)) {
             try {
@@ -149,14 +152,15 @@ public class JwkConfig {
                 rsaKey = restoreRsaKey(newRecord);
                 log.info("新 JWK 密钥已持久化: kid={}", newRecord.getKid());
             } finally {
-                redisTemplate.delete(lockKey);
+                releaseLock(lockKey, lockValue);
             }
         } else {
-            // 另一个实例正在生成密钥，自旋等待
+            // 另一个实例正在生成密钥，自旋等待。
+            // 总时长与锁 TTL 对齐，避免持锁实例尚未完成就提前超时导致本实例启动失败。
             log.info("等待其他实例完成 JWK 密钥初始化...");
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < LOCK_TTL_SECONDS * 2; i++) {
                 try {
-                    Thread.sleep(250);
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new IllegalStateException("等待 JWK 初始化被中断", e);
@@ -168,7 +172,35 @@ public class JwkConfig {
                     return;
                 }
             }
-            throw new IllegalStateException("等待 JWK 密钥初始化超时（5 秒）");
+            throw new IllegalStateException("等待 JWK 密钥初始化超时（" + LOCK_TTL_SECONDS + " 秒）");
+        }
+    }
+
+    /** JWK 初始化分布式锁 TTL（秒），需覆盖 RSA 生成 + 入库耗时；自旋等待总时长与之对齐 */
+    private static final int LOCK_TTL_SECONDS = 30;
+
+    /** 私钥加密主密码默认值（与构造器 @Value 默认一致），用于启动时检测是否未配置 */
+    private static final String DEFAULT_MASTER_PASSWORD = "daydayup-jwk-default";
+
+    /** 仅当锁仍由本实例持有时才删除，避免 GC 停顿导致锁过期后误删其他实例的锁 */
+    private static final String UNLOCK_SCRIPT =
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+
+    private void releaseLock(String lockKey, String lockValue) {
+        try {
+            redisTemplate.execute(
+                    new DefaultRedisScript<>(UNLOCK_SCRIPT, Long.class),
+                    java.util.Collections.singletonList(lockKey),
+                    lockValue);
+        } catch (Exception e) {
+            log.warn("释放 JWK 初始化锁失败: {}", e.getMessage());
+        }
+    }
+
+    private void warnIfDefaultMasterPassword() {
+        if (DEFAULT_MASTER_PASSWORD.equals(masterPassword)) {
+            log.error("JWK master-password 仍为默认值，私钥加密形同虚设！"
+                    + "生产环境必须通过环境变量 JWK_MASTER_PASSWORD 注入高熵随机值（建议 >= 32 字节）。");
         }
     }
 

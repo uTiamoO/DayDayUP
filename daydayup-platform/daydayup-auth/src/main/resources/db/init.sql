@@ -14,10 +14,9 @@ CREATE DATABASE IF NOT EXISTS `daydayup_auth`
 USE `daydayup_auth`;
 
 -- ============================================================
--- auth_refresh_token：刷新令牌（支持 /oauth2/refresh 与吊销）
+-- auth_refresh_token：刷新令牌（refresh_token grant 与吊销）
 -- ============================================================
-DROP TABLE IF EXISTS `auth_refresh_token`;
-CREATE TABLE `auth_refresh_token` (
+CREATE TABLE IF NOT EXISTS `auth_refresh_token` (
     `id`            BIGINT       NOT NULL COMMENT '主键（雪花算法）',
     `user_id`       BIGINT       NOT NULL COMMENT '关联用户 ID',
     `username`      VARCHAR(64)  NOT NULL COMMENT '用户名（冗余，便于审计）',
@@ -42,8 +41,7 @@ CREATE TABLE `auth_refresh_token` (
 -- ============================================================
 -- auth_login_history：登录历史 / 异常登录检测
 -- ============================================================
-DROP TABLE IF EXISTS `auth_login_history`;
-CREATE TABLE `auth_login_history` (
+CREATE TABLE IF NOT EXISTS `auth_login_history` (
     `id`              BIGINT       NOT NULL COMMENT '主键（雪花算法）',
     `user_id`         BIGINT       NULL     COMMENT '关联用户 ID（登录失败时可为空）',
     `username`        VARCHAR(64)  NOT NULL COMMENT '尝试登录的用户名',
@@ -65,9 +63,10 @@ CREATE TABLE `auth_login_history` (
 
 -- ============================================================
 -- auth_jwk_key：JWK 密钥存储（支持轮转与多实例共享）
+-- 重要：必须用 IF NOT EXISTS。配合 spring.sql.init.mode=always，
+--      若用 DROP TABLE 重建，会每次启动清空密钥库导致历史 JWT 全部失效。
 -- ============================================================
-DROP TABLE IF EXISTS `auth_jwk_key`;
-CREATE TABLE `auth_jwk_key` (
+CREATE TABLE IF NOT EXISTS `auth_jwk_key` (
     `id`                     BIGINT        NOT NULL COMMENT '主键（雪花算法）',
     `kid`                    VARCHAR(64)   NOT NULL COMMENT 'Key ID，JWT header 中的 kid 字段',
     `algorithm`              VARCHAR(16)   NOT NULL COMMENT '签名算法，例如 RS256',
@@ -81,8 +80,10 @@ CREATE TABLE `auth_jwk_key` (
     `create_by`              BIGINT        NULL     COMMENT '创建人',
     `update_by`              BIGINT        NULL     COMMENT '更新人',
     `deleted`                TINYINT       NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    `active_flag`            TINYINT       GENERATED ALWAYS AS (IF(`status` = 'ACTIVE' AND `deleted` = 0, 1, NULL)) VIRTUAL COMMENT 'ACTIVE 唯一性兜底列：仅当 ACTIVE 且未删除时为 1',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_kid` (`kid`),
+    UNIQUE KEY `uk_active_jwk` (`active_flag`),
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='JWK 密钥存储';
 
@@ -161,7 +162,7 @@ INSERT IGNORE INTO `oauth2_registered_client`
  `redirect_uris`, `scopes`, `client_settings`, `token_settings`)
 VALUES
 ('admin-web', 'admin-web', NULL, 'DayDayUP 管理后台',
- 'none', 'authorization_code,refresh_token,password',
+ 'none', 'authorization_code,refresh_token',
  'http://localhost:5173/callback',
  'openid,profile,admin:*',
  '{"@class":"java.util.Collections$UnmodifiableMap","settings.client.require-proof-key":true,"settings.client.require-authorization-consent":false}',

@@ -13,7 +13,6 @@ import com.yuan.daydayup.auth.mapper.SysUserRoleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -47,12 +46,12 @@ public class DayDayUpUserDetailsService implements UserDetailsService {
         Collection<GrantedAuthority> authorities = loadAuthorities(user.getId());
         boolean enabled = user.getStatus() != null && user.getStatus() == 1;
 
-        return User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .disabled(!enabled)
-                .authorities(authorities)
-                .build();
+        return new DayDayUpUser(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                enabled,
+                authorities);
     }
 
     private Collection<GrantedAuthority> loadAuthorities(Long userId) {

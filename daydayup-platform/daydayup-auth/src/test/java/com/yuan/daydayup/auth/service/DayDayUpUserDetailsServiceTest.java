@@ -46,5 +46,8 @@ class DayDayUpUserDetailsServiceTest {
         assertEquals("test", result.getUsername());
         assertTrue(result.isEnabled());
         assertTrue(result.getAuthorities().isEmpty());
+        // 必须返回携带 userId 的 DayDayUpUser，jwtCustomizer 据此注入 uid claim
+        assertInstanceOf(DayDayUpUser.class, result);
+        assertEquals(1L, ((DayDayUpUser) result).getUserId());
     }
 }

@@ -2,6 +2,9 @@ package com.yuan.daydayup.auth.config;
 
 import com.yuan.daydayup.auth.grant.PasswordAuthenticationConverter;
 import com.yuan.daydayup.auth.grant.PasswordAuthenticationProvider;
+import com.yuan.daydayup.auth.service.DayDayUpUser;
+import com.yuan.daydayup.common.core.constant.SecurityConstants;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -115,7 +118,11 @@ public class AuthorizationServerConfig {
                     Collection<String> authorities = userDetails.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
                             .collect(Collectors.toList());
-                    context.getClaims().claim("authorities", authorities);
+                    context.getClaims().claim(SecurityConstants.CLAIM_AUTHORITIES, authorities);
+                    // 注入 uid claim：网关据此透传 X-User-Id，并做权限版本校验
+                    if (userDetails instanceof DayDayUpUser ddu && ddu.getUserId() != null) {
+                        context.getClaims().claim(SecurityConstants.CLAIM_USER_ID, ddu.getUserId());
+                    }
                 }
             }
         };
@@ -139,9 +146,10 @@ public class AuthorizationServerConfig {
     // ==================== Authorization Server Settings ====================
 
     @Bean
-    public AuthorizationServerSettings authorizationServerSettings() {
+    public AuthorizationServerSettings authorizationServerSettings(
+            @Value("${daydayup.auth.issuer-url:http://127.0.0.1:9200}") String issuerUrl) {
         return AuthorizationServerSettings.builder()
-                .issuer("http://daydayup-auth:9200")
+                .issuer(issuerUrl)
                 .build();
     }
 }

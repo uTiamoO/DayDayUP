@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <ul>
  *   <li>无状态会话（不创建 HttpSession）</li>
  *   <li>禁用 CSRF（无状态接口不需要）</li>
- *   <li>所有请求默认放行 —— 由 {@code @PreAuthorize} 做细粒度方法级鉴权</li>
+ *   <li>默认要求已认证（fail-secure），仅放行健康检查/接口文档；细粒度由 {@code @PreAuthorize} 控制</li>
  *   <li>{@link HeaderAuthenticationFilter} 还原网关透传的用户上下文</li>
  * </ul>
  */
@@ -54,7 +54,16 @@ public class ResourceServerConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(reg -> reg.anyRequest().permitAll())
+                .authorizeHttpRequests(reg -> reg
+                        // 放行健康检查与接口文档；其余默认要求已认证（fail-secure），
+                        // 使漏标 @PreAuthorize 的接口至少需要登录态，不再「默认放行」裸奔
+                        .requestMatchers(
+                                "/actuator/health/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html")
+                        .permitAll()
+                        .anyRequest().authenticated())
                 .addFilterBefore(headerAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

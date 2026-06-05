@@ -12,7 +12,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Disabled("Requires MySQL + Redis infrastructure — run with local services")
+// password grant 已从 admin-web 种子客户端下线（遵循设计文档：public client 不启用 password grant）。
+// PasswordAuthenticationProvider 链路保留备用；如需重新启用本测试，需配套一个支持 password grant 的 confidential client。
+@Disabled("password grant 已下线（admin-web 不再支持）；且需 MySQL + Redis 基础设施")
 @SpringBootTest
 @AutoConfigureMockMvc
 class PasswordGrantIntegrationTest {

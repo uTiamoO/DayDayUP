@@ -22,7 +22,7 @@ spring:
         namespace: ${NACOS_NAMESPACE:}
         file-extension: yaml
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:daydayup_auth}?useSSL=false&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:23336}/${MYSQL_DATABASE:daydayup_auth}?useSSL=false&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:}
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -32,7 +32,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:26379}
       password: ${REDIS_PASSWORD:}
       database: ${REDIS_DATABASE:0}
       timeout: 5000ms
@@ -48,9 +48,10 @@ spring:
 
 daydayup:
   auth:
-    access-token-ttl-seconds: 7200
-    refresh-token-ttl-seconds: 604800
-    issuer-url: http://daydayup-auth:9200
+    # OAuth2/OIDC issuer：必须是「前端与网关都能访问、且对外一致」的地址
+    # （决定 OIDC discovery 文档里的端点 URL 与 id_token 的 iss claim）。
+    # 开发默认直连本机；容器/生产部署须经环境变量改为对外地址（如经网关：http://your-host/auth）。
+    issuer-url: ${DAYDAYUP_AUTH_ISSUER:http://127.0.0.1:9200}
     jwk:
       # 私钥加密主密码，生产环境请通过环境变量或 KMS 注入；所有实例必须相同
       master-password: ${JWK_MASTER_PASSWORD:daydayup-jwk-default}
@@ -73,7 +74,8 @@ management:
         include: health,info,metrics,prometheus
   endpoint:
     health:
-      show-details: always
+      # 仅对已认证用户显示健康详情，避免向匿名请求泄露 DB/Redis 等内部信息
+      show-details: when_authorized
   tracing:
     sampling:
       probability: ${TRACE_SAMPLING:1.0}

@@ -30,13 +30,15 @@ public class AuthSecurityConfig {
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            // CSRF：对浏览器表单登录（/login）启用防护；对无状态 REST 端点（/api/**，Bearer JWT 认证）忽略
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
             .authorizeHttpRequests(authorize -> authorize
+                // 公开端点：登录页、接口文档、健康检查、错误转发
                 .requestMatchers("/login").permitAll()
-                .requestMatchers("/oauth2/consent").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll()
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/actuator/health/**", "/error").permitAll()
+                // 其余一律要求已认证（fail-secure）：漏标 @PreAuthorize 的端点至少需登录态，不再默认裸奔
+                .anyRequest().authenticated()
             )
             .formLogin(formLogin -> formLogin
                 .loginPage("/login")

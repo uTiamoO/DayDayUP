@@ -43,6 +43,7 @@ public class UserManageService {
     private final SysUserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final CacheService cacheService;
+    private final PermissionVersionService permissionVersionService;
 
     /**
      * 分页查询用户
@@ -111,6 +112,8 @@ public class UserManageService {
     @Transactional(rollbackFor = Exception.class)
     public UserDetailVO update(Long id, UserUpdateDTO dto) {
         SysUser user = requireById(id);
+        // 双删-1：先清旧缓存（与方法末尾的删除构成双删，缩小并发回填窗口）
+        cacheService.delete(CACHE_PREFIX + id);
         user.setNickname(dto.getNickname());
         user.setEmail(dto.getEmail());
         user.setMobile(dto.getMobile());
@@ -124,6 +127,8 @@ public class UserManageService {
         }
 
         cacheService.delete(CACHE_PREFIX + id);
+        // 角色被重新分配，可能收回权限，标记权限版本以强制旧 token 失效
+        permissionVersionService.markPermissionRevoked(id);
         return toVO(user);
     }
 
@@ -133,9 +138,16 @@ public class UserManageService {
     @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Long id, UserStatusDTO dto) {
         SysUser user = requireById(id);
+        // 双删-1：先清旧缓存，降低并发读在更新窗口内回填旧值的概率
+        cacheService.delete(CACHE_PREFIX + id);
         user.setStatus(dto.getStatus());
         userMapper.updateById(user);
+        // 双删-2：更新后再清一次（如需完全消除并发回填，应改为事务提交后删除）
         cacheService.delete(CACHE_PREFIX + id);
+        // 停用即降权：标记权限版本，强制其已签发的 JWT 立即失效
+        if (dto.getStatus() != null && dto.getStatus() == 0) {
+            permissionVersionService.markPermissionRevoked(id);
+        }
     }
 
     /**
