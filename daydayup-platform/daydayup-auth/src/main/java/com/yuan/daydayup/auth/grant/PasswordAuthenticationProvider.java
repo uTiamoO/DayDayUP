@@ -9,7 +9,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClaimAccessor;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.OAuth2Token;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
@@ -75,6 +78,13 @@ public class PasswordAuthenticationProvider implements AuthenticationProvider {
         Set<String> authorizedScopes = passwordAuth.getScopes().isEmpty()
                 ? new HashSet<>(registeredClient.getScopes())
                 : passwordAuth.getScopes();
+        if (!registeredClient.getScopes().containsAll(authorizedScopes)) {
+            OAuth2Error error = new OAuth2Error(
+                    OAuth2ErrorCodes.INVALID_SCOPE,
+                    "Requested scope is not allowed for this client",
+                    null);
+            throw new OAuth2AuthenticationException(error);
+        }
 
         // 4. 生成 access_token
         DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()

@@ -2,6 +2,7 @@ package com.yuan.daydayup.auth.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.yuan.daydayup.auth.entity.SysPermission;
+import com.yuan.daydayup.auth.entity.SysRole;
 import com.yuan.daydayup.auth.entity.SysRolePermission;
 import com.yuan.daydayup.auth.entity.SysUser;
 import com.yuan.daydayup.auth.entity.SysUserRole;
@@ -65,8 +66,16 @@ public class DayDayUpUserDetailsService implements UserDetailsService {
                 .map(SysUserRole::getRoleId)
                 .toList();
 
+        List<Long> enabledRoleIds = roleMapper.selectBatchIds(roleIds).stream()
+                .filter(role -> role.getStatus() != null && role.getStatus() == 1)
+                .map(SysRole::getId)
+                .toList();
+        if (enabledRoleIds.isEmpty()) {
+            return List.of();
+        }
+
         List<SysRolePermission> rolePermissions = rolePermissionMapper.selectList(
-                new LambdaQueryWrapper<SysRolePermission>().in(SysRolePermission::getRoleId, roleIds));
+                new LambdaQueryWrapper<SysRolePermission>().in(SysRolePermission::getRoleId, enabledRoleIds));
         if (rolePermissions.isEmpty()) {
             return List.of();
         }
