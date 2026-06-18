@@ -3,6 +3,7 @@ package com.yuan.daydayup.admin.controller;
 import com.yuan.daydayup.admin.service.RoleService;
 import com.yuan.daydayup.auth.api.dto.RoleCreateDTO;
 import com.yuan.daydayup.auth.api.dto.RolePageQuery;
+import com.yuan.daydayup.auth.api.dto.RolePermissionAssignDTO;
 import com.yuan.daydayup.auth.api.dto.RoleStatusDTO;
 import com.yuan.daydayup.auth.api.dto.RoleUpdateDTO;
 import com.yuan.daydayup.auth.api.vo.RoleVO;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/roles")
@@ -55,6 +58,19 @@ public class RoleController {
     @PreAuthorize("hasPermission(null, 'admin:role:status')")
     public R<Void> changeStatus(@PathVariable Long id, @Valid @RequestBody RoleStatusDTO dto) {
         roleService.changeStatus(id, dto);
+        return R.ok();
+    }
+
+    @GetMapping("/{id}/permissions")
+    @PreAuthorize("hasPermission(null, 'admin:role:detail')")
+    public R<List<Long>> getPermissionIds(@PathVariable Long id) {
+        return R.ok(roleService.getPermissionIds(id));
+    }
+
+    @PutMapping("/{id}/permissions")
+    @PreAuthorize("hasPermission(null, 'admin:role:assign')")
+    public R<Void> assignPermissions(@PathVariable Long id, @Valid @RequestBody RolePermissionAssignDTO dto) {
+        roleService.assignPermissions(id, dto);
         return R.ok();
     }
 }

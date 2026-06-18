@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/permissions")
 @RequiredArgsConstructor
@@ -31,6 +33,12 @@ public class PermissionController {
     @PreAuthorize("hasPermission(null, 'admin:permission:list')")
     public R<PageResult<PermissionVO>> page(PermissionPageQuery query) {
         return R.ok(permissionService.page(query));
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasPermission(null, 'admin:permission:list')")
+    public R<List<PermissionVO>> listAll() {
+        return R.ok(permissionService.listAll());
     }
 
     @GetMapping("/{id}")

@@ -11,6 +11,8 @@ import com.yuan.daydayup.common.core.page.PageResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class PermissionServiceImpl implements PermissionService {
@@ -40,5 +42,10 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     public void changeStatus(Long id, PermissionStatusDTO dto) {
         permissionManageClient.changeStatus(id, dto);
+    }
+
+    @Override
+    public List<PermissionVO> listAll() {
+        return permissionManageClient.listAll().getData();
     }
 }

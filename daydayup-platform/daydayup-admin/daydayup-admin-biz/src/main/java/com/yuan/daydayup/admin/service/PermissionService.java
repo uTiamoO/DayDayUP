@@ -7,6 +7,8 @@ import com.yuan.daydayup.auth.api.dto.PermissionUpdateDTO;
 import com.yuan.daydayup.auth.api.vo.PermissionVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 
+import java.util.List;
+
 public interface PermissionService {
     PageResult<PermissionVO> page(PermissionPageQuery query);
 
@@ -17,4 +19,6 @@ public interface PermissionService {
     PermissionVO update(Long id, PermissionUpdateDTO dto);
 
     void changeStatus(Long id, PermissionStatusDTO dto);
+
+    List<PermissionVO> listAll();
 }
