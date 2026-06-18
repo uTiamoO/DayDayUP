@@ -1,6 +1,7 @@
 package com.yuan.daydayup.auth.api.client;
 
 import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.PasswordResetDTO;
 import com.yuan.daydayup.auth.api.dto.UserPageQuery;
 import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
 import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
@@ -27,6 +28,9 @@ public interface UserManageClient {
 
     @PatchMapping("/{id}/status")
     R<Void> changeStatus(@PathVariable("id") Long id, @RequestBody UserStatusDTO dto);
+
+    @PatchMapping("/{id}/password")
+    R<Void> resetPassword(@PathVariable("id") Long id, @RequestBody PasswordResetDTO dto);
 
     @PatchMapping("/{id}/login-info")
     R<Void> updateLoginInfo(@PathVariable("id") Long id, @RequestParam("lastLoginIp") String lastLoginIp);

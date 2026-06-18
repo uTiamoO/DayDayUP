@@ -162,6 +162,21 @@ public class UserManageService {
         }
     }
 
+    /**
+     * 管理员重置用户密码（BCrypt 编码）。
+     *
+     * <p>仅更新密码哈希；已签发的 access_token 在自然过期前仍有效，
+     * 如需立即失效请走登出 / 黑名单。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(Long id, String newPassword) {
+        SysUser user = requireById(id);
+        cacheService.delete(CACHE_PREFIX + id);
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+        cacheService.delete(CACHE_PREFIX + id);
+    }
+
     // ── Private helpers ──────────────────────────────────────────────
 
     private UserDetailVO toVO(SysUser user) {

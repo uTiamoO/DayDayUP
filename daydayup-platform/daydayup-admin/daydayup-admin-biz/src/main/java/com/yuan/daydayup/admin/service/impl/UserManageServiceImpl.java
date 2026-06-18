@@ -2,6 +2,7 @@ package com.yuan.daydayup.admin.service.impl;
 
 import com.yuan.daydayup.auth.api.client.UserManageClient;
 import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.PasswordResetDTO;
 import com.yuan.daydayup.auth.api.dto.UserPageQuery;
 import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
 import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
@@ -43,6 +44,11 @@ public class UserManageServiceImpl implements UserManageService {
     @Override
     public void changeStatus(Long id, UserStatusDTO dto) {
         userManageClient.changeStatus(id, dto);
+    }
+
+    @Override
+    public void resetPassword(Long id, PasswordResetDTO dto) {
+        userManageClient.resetPassword(id, dto);
     }
 
     @Override

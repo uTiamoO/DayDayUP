@@ -1,6 +1,7 @@
 package com.yuan.daydayup.admin.service;
 
 import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.PasswordResetDTO;
 import com.yuan.daydayup.auth.api.dto.UserPageQuery;
 import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
 import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
@@ -21,6 +22,8 @@ public interface UserManageService {
     UserDetailVO update(Long id, UserUpdateDTO dto);
 
     void changeStatus(Long id, UserStatusDTO dto);
+
+    void resetPassword(Long id, PasswordResetDTO dto);
 
     void updateLoginInfo(Long userId, String lastLoginIp);
 }

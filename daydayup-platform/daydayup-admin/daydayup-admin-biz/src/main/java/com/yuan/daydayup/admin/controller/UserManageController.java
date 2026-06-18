@@ -1,6 +1,7 @@
 package com.yuan.daydayup.admin.controller;
 
 import com.yuan.daydayup.auth.api.dto.UserCreateDTO;
+import com.yuan.daydayup.auth.api.dto.PasswordResetDTO;
 import com.yuan.daydayup.auth.api.dto.UserPageQuery;
 import com.yuan.daydayup.auth.api.dto.UserStatusDTO;
 import com.yuan.daydayup.auth.api.dto.UserUpdateDTO;
@@ -55,6 +56,13 @@ public class UserManageController {
     @PreAuthorize("hasPermission(null, 'admin:user:status')")
     public R<Void> changeStatus(@PathVariable Long id, @Valid @RequestBody UserStatusDTO dto) {
         userManageService.changeStatus(id, dto);
+        return R.ok();
+    }
+
+    @PatchMapping("/{id}/password")
+    @PreAuthorize("hasPermission(null, 'admin:user:resetPwd')")
+    public R<Void> resetPassword(@PathVariable Long id, @Valid @RequestBody PasswordResetDTO dto) {
+        userManageService.resetPassword(id, dto);
         return R.ok();
     }
 }
