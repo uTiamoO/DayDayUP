@@ -5,6 +5,7 @@ import com.yuan.daydayup.admin.dto.MenuPageQueryDTO;
 import com.yuan.daydayup.admin.dto.MenuStatusDTO;
 import com.yuan.daydayup.admin.dto.MenuUpdateDTO;
 import com.yuan.daydayup.admin.service.MenuService;
+import com.yuan.daydayup.admin.vo.MenuTreeVO;
 import com.yuan.daydayup.admin.vo.MenuVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.core.result.R;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/menus")
 @RequiredArgsConstructor
@@ -32,6 +35,12 @@ public class MenuController {
     @PreAuthorize("hasPermission(null, 'admin:menu:list')")
     public R<PageResult<MenuVO>> page(MenuPageQueryDTO query) {
         return R.ok(menuService.page(query));
+    }
+
+    @GetMapping("/tree")
+    @PreAuthorize("hasPermission(null, 'admin:menu:list')")
+    public R<List<MenuTreeVO>> tree() {
+        return R.ok(menuService.tree());
     }
 
     @GetMapping("/{id}")

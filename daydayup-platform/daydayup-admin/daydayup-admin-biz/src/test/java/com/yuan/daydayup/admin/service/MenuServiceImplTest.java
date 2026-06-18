@@ -5,10 +5,14 @@ import com.yuan.daydayup.admin.dto.MenuUpdateDTO;
 import com.yuan.daydayup.admin.entity.SysMenu;
 import com.yuan.daydayup.admin.mapper.SysMenuMapper;
 import com.yuan.daydayup.admin.service.impl.MenuServiceImpl;
+import com.yuan.daydayup.admin.vo.MenuTreeVO;
 import com.yuan.daydayup.admin.vo.MenuVO;
 import com.yuan.daydayup.common.core.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -100,5 +104,53 @@ class MenuServiceImplTest {
         assertThat(vo.getType()).isEqualTo("menu");
         assertThat(vo.getStatus()).isEqualTo(1);
         verify(mapper).insert(any(SysMenu.class));
+    }
+
+    @Test
+    void treeNestsChildrenUnderParents() {
+        when(mapper.selectList(any())).thenReturn(List.of(
+                menu(1L, null, "DIRECTORY", null),
+                menu(2L, 1L, "MENU", "admin:user:list")));
+
+        List<MenuTreeVO> tree = service.tree();
+
+        assertThat(tree).extracting(MenuTreeVO::getId).containsExactly(1L);
+        assertThat(tree.get(0).getChildren()).extracting(MenuTreeVO::getId).containsExactly(2L);
+    }
+
+    @Test
+    void currentUserMenusFiltersByAuthorityAndPrunesEmptyDirectories() {
+        when(mapper.selectList(any())).thenReturn(List.of(
+                menu(1L, null, "DIRECTORY", null),         // 目录（无权限码）
+                menu(2L, 1L, "MENU", "admin:user:list"),   // 有权
+                menu(3L, 1L, "MENU", "admin:secret:do"),   // 无权
+                menu(4L, null, "DIRECTORY", null)));       // 空目录 -> 裁掉
+
+        List<MenuTreeVO> menus = service.currentUserMenus(Set.of("admin:user:list"));
+
+        assertThat(menus).extracting(MenuTreeVO::getId).containsExactly(1L);
+        assertThat(menus.get(0).getChildren()).extracting(MenuTreeVO::getId).containsExactly(2L);
+    }
+
+    @Test
+    void currentUserMenusHonorsWildcardAuthority() {
+        when(mapper.selectList(any())).thenReturn(List.of(
+                menu(1L, null, "MENU", "admin:user:list")));
+
+        assertThat(service.currentUserMenus(Set.of("admin:*")))
+                .extracting(MenuTreeVO::getId).containsExactly(1L);
+    }
+
+    private SysMenu menu(Long id, Long parentId, String type, String permissionCode) {
+        SysMenu menu = new SysMenu();
+        menu.setId(id);
+        menu.setParentId(parentId);
+        menu.setType(type);
+        menu.setPermissionCode(permissionCode);
+        menu.setName("menu-" + id);
+        menu.setStatus(1);
+        menu.setVisible(1);
+        menu.setSort(0);
+        return menu;
     }
 }
