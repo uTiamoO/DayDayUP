@@ -17,7 +17,11 @@ public class GatewaySecurityProperties {
             "/auth/oauth2/token",
             "/auth/oauth2/jwks",
             "/auth/.well-known/openid-configuration",
+            "/auth/login",
+            "/auth/refresh",
+            "/auth/session/login-required",
+            "/auth/session/login",
             "/*/v3/api-docs/**",
-            "/actuator/**"
+            "/actuator/health"
     );
 }

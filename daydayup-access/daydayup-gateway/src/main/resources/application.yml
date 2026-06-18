@@ -42,12 +42,34 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
-            - id: daydayup-auth
+            - id: daydayup-auth-oauth2
               uri: lb://daydayup-auth
               predicates:
-                - Path=/auth/**
+                - Path=/auth/oauth2/**
               filters:
                 - StripPrefix=1
+            - id: daydayup-auth-well-known
+              uri: lb://daydayup-auth
+              predicates:
+                - Path=/auth/.well-known/**
+              filters:
+                - StripPrefix=1
+            - id: daydayup-auth-userinfo
+              uri: lb://daydayup-auth
+              predicates:
+                - Path=/auth/userinfo
+              filters:
+                - StripPrefix=1
+            - id: daydayup-auth-login-api
+              uri: lb://daydayup-auth
+              predicates:
+                - Path=/auth/login,/auth/refresh,/auth/session/**
+              filters:
+                - RewritePath=/auth/(?<segment>.*), /api/$\{segment}
+            # 说明：auth 的 /api/{users,roles,permissions} 不经网关对外暴露。
+            # 这些端点没有方法级鉴权，一旦公开，任意已登录用户即可越权管理 RBAC。
+            # 管理入口统一走 /admin/**（admin-biz 门面，带 @PreAuthorize）；
+            # auth 的管理 API 仅供服务间 Feign 内部调用。
             - id: daydayup-admin
               uri: lb://daydayup-admin-biz
               predicates:
@@ -73,13 +95,17 @@ spring:
 
 daydayup:
   gateway:
+    # 网关验签：直连 auth 服务（内部调用不走网关）
     jwk-set-uri: ${JWK_SET_URI:http://127.0.0.1:9200/oauth2/jwks}
     permit-paths:
       # 仅放行真正无需登录态的端点：令牌、公钥、OIDC 发现、文档、健康检查
-      # 注：刷新令牌走 POST /auth/oauth2/token (grant_type=refresh_token)，SAS 无独立 refresh 端点
       - /auth/oauth2/token
       - /auth/oauth2/jwks
       - /auth/.well-known/openid-configuration
+      - /auth/login
+      - /auth/refresh
+      - /auth/session/login-required
+      - /auth/session/login
       - /*/v3/api-docs/**
       - /actuator/health
 
