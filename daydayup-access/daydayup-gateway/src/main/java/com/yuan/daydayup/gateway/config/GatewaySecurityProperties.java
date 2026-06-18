@@ -19,6 +19,7 @@ public class GatewaySecurityProperties {
             "/auth/.well-known/openid-configuration",
             "/auth/login",
             "/auth/refresh",
+            "/auth/logout",
             "/auth/session/login-required",
             "/auth/session/login",
             "/*/v3/api-docs/**",

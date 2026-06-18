@@ -33,7 +33,7 @@ public class AuthSecurityConfig {
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
             .authorizeHttpRequests(authorize -> authorize
                 // 公开端点：自有登录 API、OIDC 会话登录 API、接口文档、健康检查、错误转发
-                .requestMatchers("/api/login", "/api/refresh").permitAll()
+                .requestMatchers("/api/login", "/api/refresh", "/api/logout").permitAll()
                 .requestMatchers(
                     "/api/session/login-required",
                     "/api/session/login",

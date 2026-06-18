@@ -2,6 +2,7 @@ package com.yuan.daydayup.auth.controller;
 
 import com.yuan.daydayup.auth.service.DayDayUpUser;
 import com.yuan.daydayup.auth.service.DirectTokenService;
+import com.yuan.daydayup.auth.service.TokenBlacklistService;
 import com.yuan.daydayup.common.core.constant.SecurityConstants;
 import com.yuan.daydayup.common.core.result.R;
 import jakarta.validation.Valid;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+
 /**
  * 平台登录 API（不走 SAS OAuth2 流程）。
  *
@@ -33,6 +36,7 @@ public class AuthApiController {
     private final PasswordEncoder passwordEncoder;
     private final DirectTokenService directTokenService;
     private final JwtDecoder jwtDecoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * 登录：用户名 + 密码 → token
@@ -76,6 +80,10 @@ public class AuthApiController {
                 return R.fail(401, "无效的 refresh_token");
             }
 
+            if (jwt.getId() != null && tokenBlacklistService.isBlacklisted(jwt.getId())) {
+                return R.fail(401, "refresh_token 已失效");
+            }
+
             String username = jwt.getSubject();
             Long userId = jwt.getClaim(SecurityConstants.CLAIM_USER_ID);
 
@@ -97,6 +105,38 @@ public class AuthApiController {
         }
     }
 
+    /**
+     * 登出：将所提交 token 的 jti 加入黑名单。网关在验签后查询黑名单并拒绝放行（access_token），
+     * refresh_token 的失效在 /api/refresh 处校验。
+     */
+    @PostMapping("/logout")
+    public R<Void> logout(@RequestBody(required = false) LogoutDTO dto) {
+        if (dto != null) {
+            blacklist(dto.getAccessToken());
+            blacklist(dto.getRefreshToken());
+        }
+        return R.ok();
+    }
+
+    /** 解析 token 取 jti，按剩余有效期写入黑名单；无效或无 jti 的 token 静默跳过。 */
+    private void blacklist(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            if (jwt.getId() == null || jwt.getExpiresAt() == null) {
+                return;
+            }
+            long ttlSeconds = jwt.getExpiresAt().getEpochSecond() - Instant.now().getEpochSecond();
+            if (ttlSeconds > 0) {
+                tokenBlacklistService.blacklist(jwt.getId(), ttlSeconds);
+            }
+        } catch (Exception ignored) {
+            // 无效或已过期的 token 无需拉黑
+        }
+    }
+
     // ==================== DTO / VO ====================
 
     @Data
@@ -110,6 +150,12 @@ public class AuthApiController {
     @Data
     public static class RefreshDTO {
         @NotBlank(message = "refresh_token 不能为空")
+        private String refreshToken;
+    }
+
+    @Data
+    public static class LogoutDTO {
+        private String accessToken;
         private String refreshToken;
     }
 

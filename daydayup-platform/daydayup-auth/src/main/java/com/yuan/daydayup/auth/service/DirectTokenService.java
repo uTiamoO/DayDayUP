@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +48,7 @@ public class DirectTokenService {
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuerUrl)
+                .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiresAt(now.plus(30, ChronoUnit.MINUTES))
                 .subject(username)
@@ -65,6 +67,7 @@ public class DirectTokenService {
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuerUrl)
+                .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiresAt(now.plus(7, ChronoUnit.DAYS))
                 .subject(username)

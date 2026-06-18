@@ -63,7 +63,7 @@ spring:
             - id: daydayup-auth-login-api
               uri: lb://daydayup-auth
               predicates:
-                - Path=/auth/login,/auth/refresh,/auth/session/**
+                - Path=/auth/login,/auth/refresh,/auth/logout,/auth/session/**
               filters:
                 - RewritePath=/auth/(?<segment>.*), /api/$\{segment}
             # 说明：auth 的 /api/{users,roles,permissions} 不经网关对外暴露。
@@ -104,6 +104,7 @@ daydayup:
       - /auth/.well-known/openid-configuration
       - /auth/login
       - /auth/refresh
+      - /auth/logout
       - /auth/session/login-required
       - /auth/session/login
       - /*/v3/api-docs/**
