@@ -52,6 +52,9 @@ daydayup:
     # （决定 OIDC discovery 文档里的端点 URL 与 id_token 的 iss claim）。
     # 开发默认直连本机；容器/生产部署须经环境变量改为对外地址（如经网关：http://your-host/auth）。
     issuer-url: ${DAYDAYUP_AUTH_ISSUER:http://127.0.0.1:9200}
+    # OIDC 授权码流程未登录时的入口。默认返回 JSON 401；接独立 auth-ui 时改为前端登录页地址。
+    # auth-ui 登录成功后应调用 /api/session/login 建立服务端会话，再回到 /oauth2/authorize。
+    oidc-login-url: ${DAYDAYUP_AUTH_OIDC_LOGIN_URL:/api/session/login-required}
     jwk:
       # 私钥加密主密码，生产环境请通过环境变量或 KMS 注入；所有实例必须相同
       master-password: ${JWK_MASTER_PASSWORD:daydayup-jwk-default}

@@ -56,7 +56,8 @@ public class AuthorizationServerConfig {
      * SAS 协议端点 SecurityFilterChain（Order=HIGHEST_PRECEDENCE）。
      *
      * <p>拦截 {@code /oauth2/authorize}、{@code /oauth2/token}、{@code /.well-known/*}、
-     * {@code /oauth2/jwks} 等 SAS 标准端点。未认证时重定向到 /login。</p>
+     * {@code /oauth2/jwks} 等 SAS 标准端点。未认证时跳转到可配置的 OIDC 登录入口；
+     * auth 服务自身不再渲染登录页面。</p>
      */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -65,7 +66,8 @@ public class AuthorizationServerConfig {
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder,
             OAuth2AuthorizationService authorizationService,
-            OAuth2TokenGenerator<?> tokenGenerator) throws Exception {
+            OAuth2TokenGenerator<?> tokenGenerator,
+            @Value("${daydayup.auth.oidc-login-url:/api/session/login-required}") String oidcLoginUrl) throws Exception {
 
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
@@ -77,7 +79,7 @@ public class AuthorizationServerConfig {
                 .oidc(Customizer.withDefaults());
 
         http.exceptionHandling(exceptions -> exceptions
-                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")));
+                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint(oidcLoginUrl)));
 
         return http.build();
     }

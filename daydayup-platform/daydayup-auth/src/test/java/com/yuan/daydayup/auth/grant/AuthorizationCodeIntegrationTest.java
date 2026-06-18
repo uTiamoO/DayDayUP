@@ -29,7 +29,7 @@ class AuthorizationCodeIntegrationTest {
     }
 
     @Test
-    void authorizeEndpointRedirectsToLogin() throws Exception {
+    void authorizeEndpointRedirectsToConfiguredOidcLoginEntry() throws Exception {
         mockMvc.perform(get("/oauth2/authorize")
                         .param("response_type", "code")
                         .param("client_id", "admin-web")
@@ -37,7 +37,7 @@ class AuthorizationCodeIntegrationTest {
                         .param("scope", "openid profile")
                         .param("state", "test-state"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/login*"));
+                .andExpect(redirectedUrlPattern("**/api/session/login-required*"));
     }
 
     @Test
