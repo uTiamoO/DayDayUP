@@ -119,9 +119,9 @@ public class UserManageService {
         user.setMobile(dto.getMobile());
         userMapper.updateById(user);
 
-        // 重新分配角色：先删旧关联再插入新关联
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
-                .eq(SysUserRole::getUserId, id));
+        // 重新分配角色：先物理清空旧关联再插入新关联
+        // （关联表唯一键不含 deleted，逻辑删除的旧行会与重新插入的同一 (user_id, role_id) 冲突）
+        userRoleMapper.physicalDeleteByUserId(id);
         if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
             assignRoles(id, dto.getRoleIds());
         }
