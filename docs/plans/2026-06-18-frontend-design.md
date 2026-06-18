@@ -1,15 +1,15 @@
 # DayDayUP 前端工程架构设计文档 (Monorepo)
 
 - **创建日期**: 2026-06-18
-- **版本**: v1.0
-- **状态**: 已评审确认
+- **版本**: v1.1
+- **状态**: 已更新 (移除租户概念)
 
 ---
 
 ## 1. 概述
 本文档为 `DayDayUP` 企业级微服务脚手架配套的前端工程设计方案。为满足未来多客户端（如游戏前台、社交应用等）与后台管理系统并存且共享底层网络、认证和工具库的需求，项目采用 **Monorepo (多包工作区)** 架构，基于 **pnpm workspace** 搭建。
 
-首期重点实现基于 `Vite + Vue 3 + TypeScript + Pinia + Element Plus` 的**后台管理系统 (admin-ui)**，承载租户、用户、角色、菜单管理及系统监控运维等功能。
+首期重点实现基于 `Vite + Vue 3 + TypeScript + Pinia + Element Plus` 的**后台管理系统 (admin-ui)**，承载用户、角色、菜单管理及系统监控运维等功能。
 
 ---
 
@@ -66,7 +66,6 @@ packages:
 ### 3.1 统一 API 网络请求 (基于 Axios)
 - **请求拦截器 (Request Interceptor)**:
   - 自动从本地缓存加载由 `Authentication Server` 签发的 `access_token`，并在请求头中注入 `Authorization: Bearer <token>`。
-  - 获取当前选中的租户标识 `tenant_id`，并往请求头中注入 `X-Tenant-Id`。
 - **开放接口加签 (Signature)**:
   - 针对带有特定加签标识的接口，由底层自动抓取 `timestamp` 与唯一随机值 `nonce`，利用 HmacSHA256 算法计算签名并加入请求头，防止防刷和重放攻击。
 - **响应拦截器 (Response Interceptor)**:
