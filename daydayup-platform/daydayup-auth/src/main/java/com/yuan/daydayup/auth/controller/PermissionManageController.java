@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * 权限管理 API（auth 模块，供 admin-biz 通过 Feign 调用）
  */
@@ -32,6 +34,11 @@ public class PermissionManageController {
     @GetMapping("/page")
     public R<PageResult<PermissionVO>> page(PermissionPageQuery query) {
         return R.ok(permissionManageService.page(query));
+    }
+
+    @GetMapping("/all")
+    public R<List<PermissionVO>> listAll() {
+        return R.ok(permissionManageService.listAll());
     }
 
     @GetMapping("/{id}")

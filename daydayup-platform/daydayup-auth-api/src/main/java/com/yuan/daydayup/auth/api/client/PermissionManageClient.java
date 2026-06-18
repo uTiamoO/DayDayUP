@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
+
 @FeignClient(name = "daydayup-auth", contextId = "permissionManageClient",
              path = "/api/permissions")
 public interface PermissionManageClient {
@@ -32,4 +34,7 @@ public interface PermissionManageClient {
 
     @PatchMapping("/{id}/status")
     R<Void> changeStatus(@PathVariable("id") Long id, @RequestBody PermissionStatusDTO dto);
+
+    @GetMapping("/all")
+    R<List<PermissionVO>> listAll();
 }

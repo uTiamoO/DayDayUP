@@ -3,6 +3,7 @@ package com.yuan.daydayup.auth.controller;
 import com.yuan.daydayup.auth.api.dto.RoleCreateDTO;
 import com.yuan.daydayup.auth.api.dto.RoleDTO;
 import com.yuan.daydayup.auth.api.dto.RolePageQuery;
+import com.yuan.daydayup.auth.api.dto.RolePermissionAssignDTO;
 import com.yuan.daydayup.auth.api.dto.RoleStatusDTO;
 import com.yuan.daydayup.auth.api.dto.RoleUpdateDTO;
 import com.yuan.daydayup.auth.api.vo.RoleVO;
@@ -60,6 +61,17 @@ public class RoleManageController {
     @PatchMapping("/{id}/status")
     public R<Void> changeStatus(@PathVariable Long id, @Valid @RequestBody RoleStatusDTO dto) {
         roleManageService.changeStatus(id, dto);
+        return R.ok();
+    }
+
+    @GetMapping("/{id}/permissions")
+    public R<List<Long>> getPermissionIds(@PathVariable Long id) {
+        return R.ok(roleManageService.getPermissionIds(id));
+    }
+
+    @PutMapping("/{id}/permissions")
+    public R<Void> assignPermissions(@PathVariable Long id, @Valid @RequestBody RolePermissionAssignDTO dto) {
+        roleManageService.assignPermissions(id, dto.getPermissionIds());
         return R.ok();
     }
 

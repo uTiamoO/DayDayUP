@@ -51,6 +51,16 @@ public class PermissionManageService {
         return toVO(requireById(id));
     }
 
+    /** 查询全部权限（扁平列表，按 sort、id 升序），供角色授权选择器使用。 */
+    public List<PermissionVO> listAll() {
+        return permissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+                        .orderByAsc(SysPermission::getSort)
+                        .orderByAsc(SysPermission::getId))
+                .stream()
+                .map(this::toVO)
+                .toList();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public PermissionVO create(PermissionCreateDTO dto) {
         checkCodeUnique(dto.getCode(), null);

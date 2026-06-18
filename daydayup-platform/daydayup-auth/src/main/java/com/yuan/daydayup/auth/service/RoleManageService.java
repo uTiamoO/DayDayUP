@@ -8,8 +8,10 @@ import com.yuan.daydayup.auth.api.dto.RoleStatusDTO;
 import com.yuan.daydayup.auth.api.dto.RoleUpdateDTO;
 import com.yuan.daydayup.auth.api.vo.RoleVO;
 import com.yuan.daydayup.auth.entity.SysRole;
+import com.yuan.daydayup.auth.entity.SysRolePermission;
 import com.yuan.daydayup.auth.entity.SysUserRole;
 import com.yuan.daydayup.auth.mapper.SysRoleMapper;
+import com.yuan.daydayup.auth.mapper.SysRolePermissionMapper;
 import com.yuan.daydayup.auth.mapper.SysUserRoleMapper;
 import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class RoleManageService {
 
     private final SysRoleMapper roleMapper;
     private final SysUserRoleMapper userRoleMapper;
+    private final SysRolePermissionMapper rolePermissionMapper;
     private final PermissionVersionService permissionVersionService;
 
     public PageResult<RoleVO> page(RolePageQuery query) {
@@ -43,6 +47,35 @@ public class RoleManageService {
 
     public RoleVO detail(Long id) {
         return toVO(requireById(id));
+    }
+
+    /** 查询角色已授予的权限 ID 列表。 */
+    public List<Long> getPermissionIds(Long roleId) {
+        requireById(roleId);
+        return rolePermissionMapper.selectList(new LambdaQueryWrapper<SysRolePermission>()
+                        .eq(SysRolePermission::getRoleId, roleId))
+                .stream()
+                .map(SysRolePermission::getPermissionId)
+                .toList();
+    }
+
+    /**
+     * 全量设置角色拥有的权限：先物理清空旧关联再写入，
+     * 并使该角色下所有用户的权限缓存失效（强制其已签发 JWT 重新鉴权）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void assignPermissions(Long roleId, List<Long> permissionIds) {
+        requireById(roleId);
+        rolePermissionMapper.physicalDeleteByRoleId(roleId);
+        if (permissionIds != null) {
+            permissionIds.stream().filter(Objects::nonNull).distinct().forEach(permissionId -> {
+                SysRolePermission rp = new SysRolePermission();
+                rp.setRoleId(roleId);
+                rp.setPermissionId(permissionId);
+                rolePermissionMapper.insert(rp);
+            });
+        }
+        markUsersAssignedToRoleRevoked(roleId);
     }
 
     @Transactional(rollbackFor = Exception.class)
