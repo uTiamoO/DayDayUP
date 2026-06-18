@@ -1,0 +1,15 @@
+{
+  "name": "daydayup-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DayDayUP Frontend Monorepo",
+  "scripts": {
+    "dev:admin": "pnpm --filter @daydayup/admin-ui dev",
+    "build:admin": "pnpm --filter @daydayup/admin-ui build",
+    "test:shared": "pnpm --filter @daydayup/shared test",
+    "build:shared": "pnpm --filter @daydayup/shared build"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
