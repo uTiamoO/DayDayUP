@@ -10,19 +10,19 @@ export interface LoginRequest {
 
 /**
  * Token 响应
+ * 字段与后端 LoginVO 对齐（camelCase）：accessToken / refreshToken / expiresIn
  */
 export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
 }
 
 /**
  * 刷新 Token 请求
  */
 export interface RefreshTokenRequest {
-  refresh_token: string;
+  refreshToken: string;
 }
 
 /**
@@ -50,7 +50,7 @@ export class AuthApi {
   async refresh(refreshToken: string): Promise<TokenResponse> {
     return this.httpClient.post<TokenResponse>(
       '/auth/refresh',
-      { refresh_token: refreshToken },
+      { refreshToken },
       { useAuth: false }
     );
   }

@@ -23,7 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('No refresh token available');
       }
       const response = await authApi.refresh(refreshToken);
-      return response.access_token;
+      return response.accessToken;
     }
   );
 
@@ -31,8 +31,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loading.value = true;
       const response: TokenResponse = await authApi.login({ username, password });
-      
-      tokenStore.setTokens(response.access_token, response.refresh_token);
+
+      tokenStore.setTokens(response.accessToken, response.refreshToken);
       isAuthenticated.value = true;
       
       ElMessage.success('登录成功');
