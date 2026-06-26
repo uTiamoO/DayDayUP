@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@daydayup/shared": "workspace:*",
-    "vue": "^3.4.15"
+    "@element-plus/icons-vue": "^2.3.2",
+    "element-plus": "^2.14.2",
+    "pinia": "^3.0.4",
+    "vue": "^3.4.15",
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.16",
