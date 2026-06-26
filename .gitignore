@@ -73,6 +73,12 @@ deploy/**/*-logs/
 deploy/**/logs/
 deploy/**/conf/dynamic/
 
+# ============ Node / 前端 ============
+# 前端工程在 daydayup-ui/ 下，根目录若出现 node_modules 多为误操作残留
+node_modules/
+.pnpm-store/
+*.pnpm-workspace-state*.json
+
 # ============ AI ============
 .claude
 .agent
