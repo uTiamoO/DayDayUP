@@ -20,7 +20,7 @@ export function setupRouterGuards(router: Router) {
       return;
     }
 
-    if (!userStore.userInfo) {
+    if (!userStore.currentUser) {
       try {
         await userStore.fetchUserInfo();
       } catch (error) {

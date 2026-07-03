@@ -74,6 +74,18 @@ export const adminRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/system/api-key/index.vue'),
         meta: { title: 'API密钥管理', icon: 'Key', permission: 'admin:apikey:list' },
       },
+      {
+        path: 'roles',
+        name: 'RoleManagement',
+        component: () => import('@/views/system/role/index.vue'),
+        meta: { title: '角色管理', icon: 'UserFilled', permission: 'admin:role:list' },
+      },
+      {
+        path: 'permissions',
+        name: 'PermissionManagement',
+        component: () => import('@/views/system/permission/index.vue'),
+        meta: { title: '权限管理', icon: 'Lock', permission: 'admin:permission:list' },
+      },
     ],
   },
 ];

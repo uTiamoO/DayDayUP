@@ -1,17 +1,16 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { UserDetail, can } from '@daydayup/shared';
-import { useAuthStore } from './auth';
+import { UserContext, can } from '@daydayup/shared';
+import { authApi } from '@/api/client';
 
 export const useUserStore = defineStore('user', () => {
-  const userInfo = ref<UserDetail | null>(null);
+  const currentUser = ref<UserContext | null>(null);
   const authorities = ref<string[]>([]);
 
   async function fetchUserInfo() {
-    const authStore = useAuthStore();
     try {
-      const data = await authStore.authApi.getCurrentUser();
-      userInfo.value = data;
+      const data = await authApi.getCurrentUser();
+      currentUser.value = data;
       authorities.value = data.authorities || [];
     } catch (error) {
       console.error('Failed to fetch user info:', error);
@@ -24,12 +23,12 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function clearUserInfo() {
-    userInfo.value = null;
+    currentUser.value = null;
     authorities.value = [];
   }
 
   return {
-    userInfo,
+    currentUser,
     authorities,
     fetchUserInfo,
     hasPermission,

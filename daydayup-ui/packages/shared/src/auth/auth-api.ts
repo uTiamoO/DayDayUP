@@ -1,4 +1,5 @@
 import { HttpClient } from '../api/http';
+import { UserContext } from '../types/user';
 
 /**
  * 登录请求参数
@@ -67,8 +68,8 @@ export class AuthApi {
    * 获取当前用户信息
    * GET /admin/me
    */
-  async getCurrentUser(): Promise<any> {
-    return this.httpClient.get('/admin/me');
+  async getCurrentUser(): Promise<UserContext> {
+    return this.httpClient.get<UserContext>('/admin/me');
   }
 }
 

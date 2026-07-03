@@ -10,6 +10,7 @@ import com.yuan.daydayup.auth.api.vo.RoleVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.core.result.R;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.List;
              path = "/api/roles")
 public interface RoleManageClient {
     @GetMapping("/page")
-    R<PageResult<RoleVO>> page(RolePageQuery query);
+    R<PageResult<RoleVO>> page(@SpringQueryMap RolePageQuery query);
 
     @GetMapping("/{id}")
     R<RoleVO> detail(@PathVariable("id") Long id);

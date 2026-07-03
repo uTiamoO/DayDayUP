@@ -9,13 +9,14 @@ import com.yuan.daydayup.auth.api.vo.UserDetailVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.core.result.R;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.*;
 
 @FeignClient(name = "daydayup-auth", contextId = "userManageClient",
              path = "/api/users")
 public interface UserManageClient {
     @GetMapping("/page")
-    R<PageResult<UserDetailVO>> page(UserPageQuery query);
+    R<PageResult<UserDetailVO>> page(@SpringQueryMap UserPageQuery query);
 
     @GetMapping("/{id}")
     R<UserDetailVO> detail(@PathVariable("id") Long id);

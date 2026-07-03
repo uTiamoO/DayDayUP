@@ -33,12 +33,13 @@ export const MENU_TYPE_TEXT: Record<string, string> = {
 };
 
 /**
- * HTTP 业务状态码
+ * 业务状态码（对齐后端 ErrorCode）
  */
 export const BIZ_CODE = {
   SUCCESS: 200,
-  UNAUTHORIZED: 20001,
-  TOKEN_EXPIRED: 20002,
-  TOKEN_INVALID: 20006,
+  UNAUTHORIZED: 401,
   FORBIDDEN: 403,
+  TOKEN_INVALID: 20001,
+  TOKEN_EXPIRED: 20002,
+  TOKEN_BLACKLISTED: 20006,
 } as const;

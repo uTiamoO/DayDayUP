@@ -1,3 +1,2 @@
 com.yuan.daydayup.common.web.config.JacksonConfig
-com.yuan.daydayup.common.web.config.CorsConfig
 com.yuan.daydayup.common.web.exception.GlobalExceptionHandler

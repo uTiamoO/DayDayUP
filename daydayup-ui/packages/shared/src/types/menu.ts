@@ -1,5 +1,5 @@
 /**
- * 菜单项
+ * 菜单（管理列表项 / 树节点，对齐后端 MenuVO 与 MenuTreeVO）
  */
 export interface MenuItem {
   id: number;
@@ -11,8 +11,8 @@ export interface MenuItem {
   icon?: string;
   type?: string;
   permissionCode?: string;
-  sort: number;
-  visible: number;
+  sort?: number;
+  visible?: number;
   status: number;
   createTime?: string;
   updateTime?: string;
@@ -20,20 +20,21 @@ export interface MenuItem {
 }
 
 /**
- * 菜单查询参数
+ * 菜单分页查询参数（对齐 MenuPageQueryDTO）
  */
 export interface MenuQuery {
   pageNum: number;
   pageSize: number;
   name?: string;
+  type?: string;
   status?: number;
 }
 
 /**
- * 菜单创建/更新请求
+ * 新建/更新菜单（对齐 MenuCreateDTO / MenuUpdateDTO）
  */
 export interface MenuForm {
-  parentId: number;
+  parentId?: number;
   code: string;
   name: string;
   path?: string;
@@ -41,7 +42,6 @@ export interface MenuForm {
   icon?: string;
   type?: string;
   permissionCode?: string;
-  sort: number;
-  visible: number;
-  status: number;
+  sort?: number;
+  visible?: number;
 }

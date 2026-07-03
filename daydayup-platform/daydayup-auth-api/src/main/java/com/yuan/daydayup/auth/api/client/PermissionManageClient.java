@@ -8,6 +8,7 @@ import com.yuan.daydayup.auth.api.vo.PermissionVO;
 import com.yuan.daydayup.common.core.page.PageResult;
 import com.yuan.daydayup.common.core.result.R;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,7 @@ import java.util.List;
              path = "/api/permissions")
 public interface PermissionManageClient {
     @GetMapping("/page")
-    R<PageResult<PermissionVO>> page(PermissionPageQuery query);
+    R<PageResult<PermissionVO>> page(@SpringQueryMap PermissionPageQuery query);
 
     @GetMapping("/{id}")
     R<PermissionVO> detail(@PathVariable("id") Long id);
