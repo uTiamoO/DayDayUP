@@ -16,6 +16,7 @@ import lombok.Getter;
  *   <li>3xxxx：用户相关</li>
  *   <li>4xxxx：游戏业务</li>
  *   <li>5xxxx：社交业务</li>
+ *   <li>6xxxx：阅读业务</li>
  * </ul>
  */
 @Getter
@@ -45,7 +46,21 @@ public enum ErrorCode {
     LOGIN_FAILED(20003, "用户名或密码错误"),
     ACCOUNT_DISABLED(20004, "账号已被禁用"),
     LOGIN_LOCKED(20005, "登录已被锁定，请稍后再试"),
-    TOKEN_BLACKLISTED(20006, "令牌已失效");
+    TOKEN_BLACKLISTED(20006, "令牌已失效"),
+
+    READING_WORK_NOT_FOUND(60001, "作品不存在"),
+    READING_CHAPTER_NOT_FOUND(60002, "章节不存在"),
+    READING_SOURCE_NOT_AVAILABLE(60003, "无可用书源"),
+    READING_UPSTREAM_FETCH_FAILED(60101, "源站抓取失败"),
+    READING_UPSTREAM_TIMEOUT(60102, "源站抓取超时"),
+    READING_UPSTREAM_BLOCKED(60103, "目标被安全策略拦截"),
+    READING_RULE_COMPILE_FAILED(60201, "书源编译失败"),
+    READING_RULE_RUNTIME_FAILED(60202, "书源规则运行时执行失败"),
+    READING_CONTENT_EMPTY(60301, "正文为空"),
+    READING_CONTENT_SANITIZATION_FAILED(60302, "正文净化失败"),
+    READING_CONTENT_QUALITY_LOW(60303, "正文质量过低"),
+    READING_INVALID_ARGUMENT(60401, "阅读请求参数非法"),
+    READING_UNSUPPORTED_MODE(60402, "不支持的调用模式");
 
     private final Integer code;
     private final String message;

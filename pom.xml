@@ -235,6 +235,11 @@
                 <artifactId>daydayup-social-api</artifactId>
                 <version>${daydayup.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.yuan</groupId>
+                <artifactId>daydayup-reading-api</artifactId>
+                <version>${daydayup.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

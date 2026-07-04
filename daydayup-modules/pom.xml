@@ -12,11 +12,12 @@
 
     <artifactId>daydayup-modules</artifactId>
     <packaging>pom</packaging>
-    <description>业务模块：游戏、社交</description>
+    <description>业务模块：游戏、社交、阅读中台</description>
 
     <modules>
         <module>daydayup-game</module>
         <module>daydayup-social</module>
+        <module>daydayup-reading</module>
     </modules>
 
 </project>
