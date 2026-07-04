@@ -76,6 +76,12 @@ spring:
                 - Path=/admin/**
               filters:
                 - StripPrefix=1
+            - id: daydayup-reading
+              uri: lb://daydayup-reading-biz
+              predicates:
+                - Path=/reading/**
+              filters:
+                - StripPrefix=1
             - id: daydayup-game
               uri: lb://daydayup-game-biz
               predicates:

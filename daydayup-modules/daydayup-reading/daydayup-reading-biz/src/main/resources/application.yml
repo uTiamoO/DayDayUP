@@ -1,0 +1,78 @@
+server:
+  port: 9600
+
+spring:
+  application:
+    name: daydayup-reading-biz
+  config:
+    import:
+      - optional:nacos:${spring.application.name}.yaml
+      - optional:nacos:daydayup-common.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+      config:
+        server-addr: ${NACOS_HOST:127.0.0.1}:${NACOS_PORT:8848}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:23336}/${MYSQL_DATABASE:daydayup_reading}?useSSL=false&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:26379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 0
+
+# 阅读中台专属配置
+reading:
+  source:
+    # 书源导入默认目录（相对进程工作目录），可被 /ops/sources/import?dir= 覆盖
+    import-dir: ${READING_SOURCE_IMPORT_DIR:docs/书源/spike-samples}
+  http:
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+    max-redirects: 5
+    # SSRF 防护：生产必须 false；仅本机联调置 true
+    allow-private: ${READING_HTTP_ALLOW_PRIVATE:false}
+    # 书源未声明 concurrentRate 时的默认最小请求间隔（毫秒）
+    default-min-interval-ms: 200
+    max-concurrent-per-source: 2
+    rate-wait-timeout-ms: 10000
+  script:
+    # GraalJS 单脚本执行超时（看门狗 Context.interrupt）与语句数上限（双保险）
+    timeout-ms: 3000
+    statement-limit: 2000000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  tracing:
+    sampling:
+      probability: ${TRACE_SAMPLING:1.0}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://127.0.0.1:9411/api/v2/spans}

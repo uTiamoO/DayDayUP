@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.yuan</groupId>
+        <artifactId>daydayup-modules</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>daydayup-reading</artifactId>
+    <packaging>pom</packaging>
+    <description>阅读中台：书源导入编译、解析运行时、内容净化、统一阅读 API</description>
+
+    <modules>
+        <module>daydayup-reading-api</module>
+        <module>daydayup-reading-biz</module>
+    </modules>
+
+</project>

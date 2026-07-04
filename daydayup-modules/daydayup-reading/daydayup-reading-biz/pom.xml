@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.yuan</groupId>
+        <artifactId>daydayup-reading</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>daydayup-reading-biz</artifactId>
+    <description>阅读中台实现：书源中心、规则编译器、解析运行时、内容净化、内容资产、阅读 API</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-reading-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-mybatis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-log</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-swagger</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yuan</groupId>
+            <artifactId>daydayup-common-feign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+        <!-- 解析运行时：HTML 抽取(jsoup) + JSONPath(jayway)，版本由 Spring Boot BOM 管理 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+        </dependency>
+        <!-- 解析运行时：统一 HTTP 出站（手动重定向 + Dns 钩子做 SSRF 二次校验） -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        <!-- 受控 JS 脚本执行（GraalJS：可靠超时中断 + 默认沙箱，engine-decision 规格；62MB 依赖树记技术债） -->
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>polyglot</artifactId>
+            <version>24.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.graalvm.polyglot</groupId>
+            <artifactId>js-community</artifactId>
+            <version>24.1.2</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
