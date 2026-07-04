@@ -1,0 +1,4 @@
+{"file":"PRD/novel_aggregator_prd.md","reason":"阅读中台产品需求、切片6进度和验收口径"}
+{"file":"docs/superpowers/specs/2026-07-02-reading-api-platform-design.md","reason":"同步任务体系、切片6任务与重处理的权威设计规格"}
+{"file":".trellis/spec/backend/reading-api-contracts.md","reason":"阅读 API 边界和网关 internal 暴露约束"}
+{"file":".trellis/spec/backend/index.md","reason":"后端开发规范入口"}

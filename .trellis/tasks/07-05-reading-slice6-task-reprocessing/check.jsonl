@@ -1,0 +1,4 @@
+{"file":"PRD/novel_aggregator_prd.md","reason":"核对切片6验收标准与PRD进度更新"}
+{"file":"docs/superpowers/specs/2026-07-02-reading-api-platform-design.md","reason":"核对任务状态机、任务类型和内网边界"}
+{"file":".trellis/spec/backend/reading-api-contracts.md","reason":"核对阅读 API 不暴露 internal 路由和源站 URL"}
+{"file":".trellis/spec/backend/index.md","reason":"后端开发规范入口"}

@@ -6,6 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 阅读中台服务启动类
@@ -17,6 +18,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  */
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.yuan.daydayup")
+@EnableScheduling
 // 按 @Mapper 注解过滤，避免把 service/其它接口误注册为 Mapper（包按领域拆分，非扁平 mapper 包）
 @MapperScan(basePackages = "com.yuan.daydayup.reading", annotationClass = Mapper.class)
 @SpringBootApplication

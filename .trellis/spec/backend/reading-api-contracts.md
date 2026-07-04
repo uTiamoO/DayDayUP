@@ -169,3 +169,120 @@ if (!StringUtils.hasText(snapshot.getSanitizedContent())
 }
 contentSanitizeService.sanitize(chapterId, sourceId);
 ```
+
+---
+
+## Scenario: Reading Task/Reprocessing Slice 6
+
+### 1. Scope / Trigger
+
+- Trigger: application-internal task table, worker, and ops APIs are added for the reading module.
+- Applies to: `daydayup-reading-api` task DTO/VOs and `daydayup-reading-biz` `task/**` package.
+- Boundary: task APIs are internal-only under `/api/v1/internal/**`; gateway must not expose them.
+
+### 2. API Signatures
+
+```http
+POST /api/v1/internal/ops/tasks/submit
+GET  /api/v1/internal/ops/tasks/{taskId}
+GET  /api/v1/internal/ops/tasks/page
+POST /api/v1/internal/ops/tasks/{taskId}/cancel
+POST /api/v1/internal/ops/tasks/drain?limit=10
+```
+
+### 3. Task Contracts
+
+Allowed task types:
+
+- `source_import`
+- `source_compile`
+- `work_discovery`
+- `toc_sync`
+- `content_fetch`
+- `content_sanitize`
+
+Allowed statuses:
+
+- `pending`
+- `running`
+- `succeeded`
+- `failed`
+- `partial_succeeded`
+- `cancelled`
+
+Submit is idempotent for active tasks: a duplicate `taskType + bizKey` while an existing task is `pending` or `running` returns that existing task instead of inserting another row.
+
+Worker acquire must use database conditional update semantics. It may acquire due `pending` tasks and stale-lock `running` tasks only; it must skip tasks whose `nextRunAt` is in the future.
+
+Task handlers must call existing services (`SourceImportService`, `RuleCompileService`, `ContentDiscoveryService`, `ChapterSyncService`, `ContentFetchService`, `ContentSanitizeService`) and must not bypass `HttpFetcher` / `SourceRateLimiter` with direct HTTP calls.
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected error |
+| --- | --- |
+| Unsupported `taskType` | `READING_INVALID_ARGUMENT` |
+| Missing required payload field | `READING_INVALID_ARGUMENT` |
+| Missing task | `READING_INVALID_ARGUMENT` |
+| Cancel non-`pending` task | `READING_INVALID_ARGUMENT` |
+| Handler business failure with retries left | task returns to `pending` with incremented `retryCount` and delayed `nextRunAt` |
+| Handler business failure after retries exhausted | task becomes `failed` with `finishedAt/errorMessage` |
+
+### 5. Good/Base/Bad Cases
+
+- Good: submitting `taskType=content_fetch` with the same `bizKey=chapter:1:source:10` while an existing task is `pending` returns the existing task row instead of inserting a duplicate.
+- Good: manual `POST /api/v1/internal/ops/tasks/drain?limit=10` acquires due tasks using database conditional update, executes through existing services, and records counts for succeeded, partial, retry-scheduled, and failed tasks.
+- Base: automatic worker stays disabled by default with `reading.task.worker-enabled=false`; local startup must not begin fetching upstream content unless explicitly enabled.
+- Bad: task executor directly creates an HTTP client or calls source URLs itself; this bypasses SSRF checks and per-source rate limiting.
+- Bad: stale-lock reacquire preserves the previous `startedAt`; the new execution attempt must update `startedAt`, `lockedBy`, and `lockedAt` for auditability.
+
+### 6. Tests Required
+
+- Task service:
+  - Assert duplicate active `taskType + bizKey` returns the existing task.
+  - Assert `cancel` succeeds only for `pending` tasks.
+  - Assert acquire skips future `nextRunAt` and can reacquire stale `running` locks.
+  - Assert stale-lock reacquire updates `startedAt` to the new attempt timestamp.
+  - Assert failures schedule delayed retry while retry budget remains and mark final `failed` after exhaustion.
+- Task executor:
+  - Assert `source_import`, `source_compile`, `work_discovery`, `toc_sync`, `content_fetch`, and `content_sanitize` dispatch to their existing services.
+  - Assert missing required payload fields throw `READING_INVALID_ARGUMENT`.
+- Worker:
+  - Assert drain records success, partial success, retry-scheduled failure, and final failure counts.
+- Boundary:
+  - Assert task ops controller path remains under `/api/v1/internal/ops/tasks`.
+  - Assert gateway config does not add a `/api/v1/internal/**` route.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```java
+// Reacquired stale running task keeps the old attempt timestamp.
+@Update("UPDATE reading_task SET task_status = 'running', locked_by = #{workerId}, "
+        + "locked_at = #{now}, started_at = COALESCE(started_at, #{now}) WHERE id = #{id}")
+int tryAcquire(...);
+```
+
+#### Correct
+
+```java
+// Every acquired execution attempt writes fresh lock and start timestamps.
+@Update("UPDATE reading_task SET task_status = 'running', locked_by = #{workerId}, "
+        + "locked_at = #{now}, started_at = #{now}, finished_at = NULL WHERE id = #{id}")
+int tryAcquire(...);
+```
+
+#### Wrong
+
+```java
+// Executor bypasses reading runtime safeguards.
+String body = new OkHttpClient().newCall(new Request.Builder().url(sourceUrl).build()).execute().body().string();
+```
+
+#### Correct
+
+```java
+// Executor delegates to existing services; runtime HTTP, SSRF and rate limiting stay centralized.
+contentFetchService.fetchAndStore(chapterId, sourceId, forceRefresh);
+contentSanitizeService.sanitize(chapterId, sourceId);
+```

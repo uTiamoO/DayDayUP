@@ -61,6 +61,14 @@ reading:
     # GraalJS 单脚本执行超时（看门狗 Context.interrupt）与语句数上限（双保险）
     timeout-ms: 3000
     statement-limit: 2000000
+  task:
+    # 自动 worker 默认关闭，避免本地启动后意外抓取；可通过内网 /ops/tasks/drain 手动验证
+    worker-enabled: ${READING_TASK_WORKER_ENABLED:false}
+    worker-interval-ms: ${READING_TASK_WORKER_INTERVAL_MS:5000}
+    lock-timeout-ms: ${READING_TASK_LOCK_TIMEOUT_MS:300000}
+    default-max-retry: ${READING_TASK_DEFAULT_MAX_RETRY:3}
+    retry-backoff-ms: ${READING_TASK_RETRY_BACKOFF_MS:30000}
+    batch-size: ${READING_TASK_BATCH_SIZE:10}
 
 management:
   endpoints:
