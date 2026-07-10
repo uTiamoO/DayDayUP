@@ -4,6 +4,156 @@
 
 ---
 
+## Scenario: Reading Platform v3.0 Redesign Direction
+
+### 1. Scope / Trigger
+
+- Trigger: product direction is reset after competitor analysis and user feedback.
+- Applies to: future `daydayup-reading-api` / `daydayup-reading-biz` work after the redesign task.
+- Boundary: Open-source reading/Legado book sources are reference material only. Production behavior must be implemented through DayDayUP-owned source configuration, parser, aggregation, sanitization, access-control, health, and distribution capabilities.
+
+### 2. Product Contract Priorities
+
+| Priority | Capability | Contract expectation |
+| --- | --- | --- |
+| P0/P1 | Multi-source aggregation orchestration | Search/detail/toc/content orchestration must isolate per-source failure, timeout, rate-limit, circuit-break, and disabled-source states. |
+| P0/P1 | Per-source observability | Public or ops-facing responses must expose `source_time_cost`-like diagnostics: source id/name, elapsed time, cache hit, result count, status, and disabled/error reason. |
+| P1 | Member key and content access limiting | Content access is the control point for `user_key`, membership level, online IP/device, read counters, and ban audit. |
+| P1/P2 | Rule/source package distribution | Distribution must publish DayDayUP-owned source/config packages with version and changelog, not raw unaudited external scripts as the production contract. |
+| P2 | Lightweight user center and health status | Provide user key/membership/read stats/online device views plus service and source health status. |
+| P3 | Multi-modal content and downloads | Comic/audio/drama/client download/EPUB remain outside the first text-novel phase. |
+
+### 3. Wrong vs Correct
+
+#### Wrong
+
+```text
+Treat a third-party Legado JSON file as the platform's production executable contract and expose that behavior directly to clients.
+```
+
+#### Correct
+
+```text
+Use third-party source files as research/reference input, then implement DayDayUP-owned source profiles, parsers, aggregation, sanitization, caching, health checks, and access governance.
+```
+
+---
+
+## Scenario: 69shuba First Native Source Integration
+
+### 1. Scope / Trigger
+
+- Trigger: v3.0 uses `https://www.69shuba.com/` as the first concrete native source example.
+- Applies to: future SourceProfile, SourceAdapter, Parser, diagnostics, health, cache, and public API integration for `sourceCode=69shuba`.
+- Boundary: `docs/书源/69shuba.json` is reference only. Production parser behavior must be proven by directly observed or legally/manual captured fixtures. Current direct fetches returned Cloudflare HTTP 403 challenge, so `blocked` / `verification_required` is a first-class contract.
+
+### 2. Signatures / SourceProfile Contract
+
+```text
+sourceCode = 69shuba
+sourceName = 69书吧
+contentType = text_novel
+baseUrl = https://www.69shuba.com
+allowedHosts = [www.69shuba.com]
+initialStatus = verification_required | degraded
+```
+
+```java
+SourceSearchResult search(SourceProfile profile, SearchQuery query, SourceRequestContext context);
+SourceDiscoveryResult discover(SourceProfile profile, DiscoveryQuery query, SourceRequestContext context);
+SourceWorkDetail detail(SourceProfile profile, SourceWorkRef workRef, SourceRequestContext context);
+SourceToc toc(SourceProfile profile, SourceWorkRef workRef, SourceRequestContext context);
+SourceContent content(SourceProfile profile, SourceChapterRef chapterRef, SourceRequestContext context);
+```
+
+| Capability | Source contract | Parser contract |
+| --- | --- | --- |
+| Search | `POST /modules/article/search.php`, body `searchkey=<GBK keyword>&searchtype=all` | `.newbox li` -> platform `SourceWorkSearchItem` |
+| Discovery | `/novels/{sort}_{categoryCode}_{statusCode}_{page}.htm`, plus `/novels/male` and `/novels/female` after fixture verification | `#article_list_content li` -> platform work candidates |
+| Detail | `/book/{bookId}.htm`, with `bookId` extracted from an internal source ref | meta properties and `.navtxt` -> `SourceWorkDetail` |
+| TOC | Extract href from detail fixture `.more-btn@href` or `.addbtn a:eq(0)@href`; do not hardcode `/txt/{id}/` before verification | `#catalog li a` -> ordered `SourceTocItem` |
+| Content | Extract chapter href from TOC fixture | `.txtnav@textNodes` -> raw content, then source cleanup and common sanitizer |
+
+### 3. Contracts
+
+- Challenge detection runs before any business selector. Signals include HTTP `403`, `server: cloudflare`, title `Just a moment...`, `https://challenges.cloudflare.com`, `challenge-platform`, `turnstile`, or `cf-ray`.
+- When challenge is detected, adapter returns diagnostic `status=blocked` or `status=verification_required`, `resultCount=0`, `errorReason=cloudflare_challenge`, and safe `httpStatus=403`; it must not treat the page as successful empty results.
+- The adapter must not bypass Cloudflare/Turnstile, automate human verification, persist cookies/tokens, or reuse browser verification state.
+- Public VOs must never expose upstream URLs, headers, cookies, challenge bodies, source selector strings, or raw source refs.
+- Search request body for keyword `斗破苍穹` must be GBK encoded when submitting upstream.
+- Status normalization: `完本`, `全本`, or status code `1` -> `completed`; `连载` or status code `2` -> `ongoing`; empty/unknown/status code `0` -> `unknown` unless detail meta confirms status.
+- Content cleanup removes markers such as `本章完`, `www.69shuba.com`, `请记住本书首发域名...`, and `loadAdv(...)`; cleanup must preserve Chinese story paragraphs and must not overwrite good sanitized content with empty output.
+
+### 4. Validation & Error Matrix
+
+| Condition | Expected behavior / error |
+| --- | --- |
+| HTTP 403 Cloudflare challenge on search/list/detail/toc/content | Source diagnostic `blocked` or `verification_required`; upstream 6xxxx category when surfaced; no selector success |
+| Search endpoint available but no validated unblocked fixture | Source capability remains `verification_required`; aggregate search may use cached/materialized DayDayUP works only |
+| Search keyword encoded as UTF-8 body instead of GBK | Contract test fails before integration is enabled |
+| Upstream URL host outside `www.69shuba.com` | Reject by SourceProfile allowed-host / SSRF guard |
+| Detail URL not matching verified `/book/{id}.htm` pattern or fixture-derived ref | `READING_INVALID_ARGUMENT` or source ref validation failure |
+| TOC URL assumed instead of extracted from detail fixture | Contract review failure; parser not production-ready |
+| `.txtnav` missing or text empty | `READING_CONTENT_EMPTY` |
+| Cleanup removes all non-empty content | `READING_CONTENT_SANITIZATION_FAILED` or existing content-empty contract; do not publish as good sanitized output |
+| Public response contains `sourceBookUrl`, `sourceChapterUrl`, upstream header/cookie, or challenge body | Security contract failure |
+
+### 5. Good / Base / Bad Cases
+
+- Good: challenge fixture with HTTP 403 and `Just a moment...` returns diagnostics `verification_required`, `resultCount=0`, and does not run `.newbox li` / `#catalog` selectors as business HTML.
+- Good: `DiscoveryQuery(sort=monthvisit, categoryCode=9, statusCode=2, page=3)` generates `/novels/monthvisit_9_2_3.htm`, but the URL remains internal.
+- Good: detail fixture maps meta properties, `.navtxt`, and TOC href into `SourceWorkDetail` and internal TOC ref.
+- Base: with only blocked fixtures available, SourceProfile can exist as disabled/degraded behind feature flag, but source is not production-enabled.
+- Bad: importing `docs/书源/69shuba.json` and executing it directly as the production parser.
+- Bad: adding cookies, Turnstile tokens, or copied browser challenge artifacts to config, fixtures, logs, tests, or distribution packages.
+- Bad: returning `https://www.69shuba.com/book/58687.htm` or chapter URLs in any public reading response.
+
+### 6. Tests Required
+
+- Fixture governance: assert no fixture/config contains `Cookie`, `cf_clearance`, Turnstile response tokens, `qttoken`, or reusable browser verification artifacts.
+- Challenge handling: assert HTTP 403 + Cloudflare markers maps to `blocked` / `verification_required` and is not parsed as empty successful content.
+- Request construction: assert search body for `斗破苍穹` is GBK encoded and includes `searchtype=all`; assert external hosts are rejected.
+- Parser fixtures: assert `/book/58687.htm` -> sourceWorkKey `58687`; assert search/list/detail/TOC/content fixtures map into DayDayUP DTOs with normalized status and no public URL exposure.
+- Diagnostics and public API: assert every source attempt emits elapsed/cacheHit/resultCount/status/error reason; assert public VOs do not contain upstream URLs, headers, cookies, selector strings, or challenge body.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```java
+Document doc = Jsoup.parse(response.body());
+List<Element> items = doc.select(".newbox li");
+return SourceSearchResult.ok(items.stream().map(this::parseItem).toList());
+```
+
+#### Correct
+
+```java
+if (challengeDetector.isCloudflareChallenge(response)) {
+    return SourceSearchResult.blocked("cloudflare_challenge", response.statusCode());
+}
+Document doc = htmlParser.parseBusinessHtml(response);
+return searchResultParser.parse(doc);
+```
+
+#### Wrong
+
+```java
+vo.setSourceBookUrl("https://www.69shuba.com/book/58687.htm");
+```
+
+#### Correct
+
+```java
+vo.setWorkId(workId);
+vo.setSourceId(sourceId);
+vo.setSourceName("69书吧");
+vo.setTitle(detail.title());
+```
+
+
+---
+
 ## Scenario: Unified Reading API Slice 5
 
 ### 1. Scope / Trigger
@@ -23,6 +173,9 @@ GET /api/v1/reading/works/{workId}
 GET /api/v1/reading/works/{workId}/sources
 GET /api/v1/reading/works/{workId}/chapters
 GET /api/v1/reading/chapters/{chapterId}/content
+GET /api/v1/reading/sources
+GET /api/v1/reading/categories
+GET /api/v1/reading/filters
 ```
 
 Gateway route:
@@ -45,7 +198,10 @@ ReadingPageVO<ReadingWorkVO> search(String keyword, int page, int pageSize,
 ReadingPageVO<ReadingWorkVO> works(String category, String status, String sort,
                                    Long sourceId, int page, int pageSize);
 ReadingWorkDetailVO detail(Long workId);
-List<ReadingSourceVO> sources(Long workId);
+ReadingPageVO<ReadingSourceVO> sources(Long workId, int page, int pageSize);
+ReadingPageVO<ReadingSourceVO> availableSources(int page, int pageSize);
+List<String> categories(int limit);
+ReadingFilterVO filters(int limit);
 ReadingPageVO<ReadingChapterVO> chapters(Long workId, Long sourceId,
                                          int page, int pageSize, String refreshPolicy);
 ReadingContentVO content(Long chapterId, Long sourceId,
@@ -86,6 +242,9 @@ Response contracts:
 - Pagination uses `ReadingPageVO<T>` with `list,total,page,pageSize,hasNext`.
 - Public VOs must not expose `sourceBookUrl` or `sourceChapterUrl`.
 - Content defaults to sanitized output; raw/normalized are available only by explicit version request.
+- `/sources` returns enabled source summaries only; it must not expose upstream URLs or raw headers.
+- `/categories` and `/filters` are metadata endpoints for client-side category display and filtering. `limit` must be bounded (max 100).
+- `/works/{workId}/sources` must use database pagination and batch source metadata lookup; do not load all bindings into memory or query `SourceDefinition` one row at a time.
 
 ### 4. Validation & Error Matrix
 
