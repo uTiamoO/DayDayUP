@@ -1,0 +1,2 @@
+{"file":".trellis/spec/guides/index.md","reason":"Review should verify cross-document consistency and that no sensitive credentials were persisted."}
+{"file":".trellis/tasks/07-08-dahuilang-competitor-analysis/prd.md","reason":"Acceptance criteria for checking competitor analysis and PRD synchronization."}
