@@ -11,6 +11,7 @@ import com.yuan.daydayup.reading.compiler.RuleCompiler;
 import com.yuan.daydayup.reading.compiler.model.CompileGrade;
 import com.yuan.daydayup.reading.compiler.model.RuleModel;
 import com.yuan.daydayup.reading.compiler.service.RuleCompileService;
+import com.yuan.daydayup.reading.observability.ReadingMetrics;
 import com.yuan.daydayup.reading.source.entity.SourceCompiledRule;
 import com.yuan.daydayup.reading.source.entity.SourceDefinition;
 import com.yuan.daydayup.reading.source.mapper.SourceCompiledRuleMapper;
@@ -35,15 +36,18 @@ public class RuleCompileServiceImpl implements RuleCompileService {
     private final SourceCompiledRuleMapper compiledMapper;
     private final RuleCompiler compiler;
     private final ObjectMapper objectMapper;
+    private final ReadingMetrics metrics;
 
     public RuleCompileServiceImpl(SourceDefinitionMapper sourceMapper,
                                   SourceCompiledRuleMapper compiledMapper,
                                   RuleCompiler compiler,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  ReadingMetrics metrics) {
         this.sourceMapper = sourceMapper;
         this.compiledMapper = compiledMapper;
         this.compiler = compiler;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @Override
@@ -72,6 +76,7 @@ public class RuleCompileServiceImpl implements RuleCompileService {
                 }
             } catch (Exception e) {
                 batch.setFailed(batch.getFailed() + 1);
+                metrics.recordCompile("failed");
                 log.warn("[rule-compile] 书源编译失败 id={}", source.getId(), e);
             }
         }
@@ -89,6 +94,7 @@ public class RuleCompileServiceImpl implements RuleCompileService {
             String grade = health.getGrade().name().toLowerCase();
 
             SourceCompiledRule compiled = upsertCompiled(source, model, health, grade);
+            metrics.recordCompile(grade);
 
             // 回写书源编译等级
             source.setCompileGrade(grade);

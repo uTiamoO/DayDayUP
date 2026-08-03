@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 出站 SSRF 防护（PRD §7）：
@@ -49,6 +50,11 @@ public class SsrfValidator {
      * @param baseUrl 书源 baseUrl（同域白名单锚点）
      */
     public void validate(String url, String baseUrl) {
+        validate(url, baseUrl, Set.of());
+    }
+
+    /** 校验一次出站目标，并在提供 allowlist 时要求 host 精确命中。 */
+    public void validate(String url, String baseUrl, Set<String> allowedHosts) {
         URI uri = parse(url);
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
         if (!scheme.equals("http") && !scheme.equals("https")) {
@@ -56,9 +62,18 @@ public class SsrfValidator {
         }
         String host = uri.getHost();
         if (host == null || host.isBlank()) {
-            throw blocked("目标缺少 host: " + url);
+            throw blocked("目标缺少 host");
+        }
+        if (allowedHosts != null && !allowedHosts.isEmpty()
+                && allowedHosts.stream().noneMatch(allowed -> host.equalsIgnoreCase(allowed))) {
+            throw blocked("目标 host 不在精确允许范围内");
         }
         checkSameDomain(host, baseUrl);
+        // 代理模式：目标经外部代理出站、不穿本地内网，本地 DNS 解析既不可靠（翻墙场景）也无意义，
+        // 跳过「解析 + 私网 IP 段」校验；协议与同域校验已在上面完成，仍防书源规则跳到任意站点。
+        if (props.getProxy() != null && props.getProxy().isEnabled()) {
+            return;
+        }
         checkResolved(host, resolve(host));
     }
 
@@ -135,7 +150,7 @@ public class SsrfValidator {
         try {
             return URI.create(url);
         } catch (Exception e) {
-            throw blocked("URL 非法: " + url);
+            throw blocked("URL 非法");
         }
     }
 

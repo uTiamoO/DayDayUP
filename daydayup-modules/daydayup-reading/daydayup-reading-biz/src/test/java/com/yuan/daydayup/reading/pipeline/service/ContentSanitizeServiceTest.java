@@ -38,6 +38,7 @@ class ContentSanitizeServiceTest {
     private ChapterContentSnapshotMapper snapshotMapper;
     private ContentSanitizationRunMapper runMapper;
     private ContentSanitizeService service;
+    private io.micrometer.core.instrument.simple.SimpleMeterRegistry registry;
 
     @BeforeEach
     void setUp() {
@@ -53,7 +54,9 @@ class ContentSanitizeServiceTest {
         }).when(runMapper).insert(any(ContentSanitizationRun.class));
 
         SanitizationPipeline pipeline = new SanitizationPipeline(new ReadingSanitizationProperties());
-        service = new ContentSanitizeServiceImpl(snapshotMapper, runMapper, pipeline, new ObjectMapper());
+        registry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        service = new ContentSanitizeServiceImpl(snapshotMapper, runMapper, pipeline, new ObjectMapper(),
+                new com.yuan.daydayup.reading.observability.ReadingMetrics(registry));
     }
 
     private ChapterContentSnapshot snapshot(String normalized) {
@@ -89,6 +92,9 @@ class ContentSanitizeServiceTest {
         verify(snapshotMapper).updateById(any(ChapterContentSnapshot.class));
         assertEquals(1, runs.size());
         assertEquals("accepted", runs.get(0).getRunStatus());
+        // 观测性：记 reading.sanitize.total{result=accepted} 与质量分分布
+        assertEquals(1, registry.find("reading.sanitize.total").tag("result", "accepted").counter().count(), 0.0);
+        assertEquals(1, registry.find("reading.sanitize.quality").summary().count());
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuan.daydayup.common.core.enums.ErrorCode;
 import com.yuan.daydayup.common.core.exception.BizException;
 import com.yuan.daydayup.reading.api.vo.SanitizeResultVO;
+import com.yuan.daydayup.reading.observability.ReadingMetrics;
 import com.yuan.daydayup.reading.pipeline.SanitizationPipeline;
 import com.yuan.daydayup.reading.pipeline.entity.ContentSanitizationRun;
 import com.yuan.daydayup.reading.pipeline.mapper.ContentSanitizationRunMapper;
@@ -35,15 +36,18 @@ public class ContentSanitizeServiceImpl implements ContentSanitizeService {
     private final ContentSanitizationRunMapper runMapper;
     private final SanitizationPipeline pipeline;
     private final ObjectMapper objectMapper;
+    private final ReadingMetrics metrics;
 
     public ContentSanitizeServiceImpl(ChapterContentSnapshotMapper snapshotMapper,
                                       ContentSanitizationRunMapper runMapper,
                                       SanitizationPipeline pipeline,
-                                      ObjectMapper objectMapper) {
+                                      ObjectMapper objectMapper,
+                                      ReadingMetrics metrics) {
         this.snapshotMapper = snapshotMapper;
         this.runMapper = runMapper;
         this.pipeline = pipeline;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     @Override
@@ -65,8 +69,10 @@ public class ContentSanitizeServiceImpl implements ContentSanitizeService {
             result = pipeline.run(normalized);
         } catch (Exception e) {
             archive(snapshot.getId(), null, "failed", List.of("pipeline 异常: " + e.getMessage()));
+            metrics.recordSanitize("failed", null);
             throw new BizException(ErrorCode.READING_CONTENT_SANITIZATION_FAILED, "净化失败: " + e.getMessage());
         }
+        metrics.recordSanitize(result.getRunStatus(), result.getQualityScore());
 
         // publish-decision：accepted/degraded 发布 sanitized；rejected 不覆盖
         boolean published = !"rejected".equals(result.getRunStatus());

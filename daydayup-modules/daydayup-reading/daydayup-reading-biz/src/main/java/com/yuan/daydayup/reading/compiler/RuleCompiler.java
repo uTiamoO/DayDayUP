@@ -3,6 +3,7 @@ package com.yuan.daydayup.reading.compiler;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.yuan.daydayup.reading.compiler.model.ActionRule;
 import com.yuan.daydayup.reading.compiler.model.CompileGrade;
@@ -12,6 +13,7 @@ import com.yuan.daydayup.reading.compiler.model.RuleModel;
 import com.yuan.daydayup.reading.compiler.model.RuleStep;
 import com.yuan.daydayup.reading.compiler.parser.RuleStringParser;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,40 @@ public class RuleCompiler {
             "explore", "exploreUrl"
     );
 
+    /** 项目自有书源格式 action -> source block 字段 */
+    private static final Map<String, String> NATIVE_ACTION_MAP = Map.of(
+            "search", "searchBook",
+            "detail", "bookDetail",
+            "toc", "chapterList",
+            "content", "chapterContent"
+    );
+
+    /** 项目自有书源格式 action -> 列表字段 */
+    private static final Map<String, String> NATIVE_LIST_FIELD_MAP = Map.of(
+            "search", "list",
+            "toc", "list"
+    );
+
+    /** 项目自有书源格式字段名 -> RuleModel 字段名 */
+    private static final Map<String, String> NATIVE_FIELD_NAME_MAP = Map.ofEntries(
+            Map.entry("bookName", "name"),
+            Map.entry("title", "name"),
+            Map.entry("author", "author"),
+            Map.entry("desc", "intro"),
+            Map.entry("cover", "cover"),
+            Map.entry("cat", "kind"),
+            Map.entry("status", "status"),
+            Map.entry("lastChapterTitle", "latestChapter"),
+            Map.entry("detailUrl", "bookUrl"),
+            Map.entry("url", "chapterUrl"),
+            Map.entry("content", "content")
+    );
+
+    /** 项目自有格式中不属于抽取规则的配置字段 */
+    private static final List<String> NATIVE_ACTION_CONFIG_FIELDS = List.of(
+            "actionID", "parserID", "host", "validConfig", "responseFormatType", "requestInfo", "moreKeys"
+    );
+
     /** 宽松 JSON：Legado 的 header / URL 选项常用单引号、裸键名、换行 */
     private static final ObjectMapper LENIENT = JsonMapper.builder()
             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
@@ -55,7 +91,8 @@ public class RuleCompiler {
         this.parser = parser;
     }
 
-    public RuleModel compile(JsonNode legado) {
+    public RuleModel compile(JsonNode source) {
+        JsonNode legado = normalizeSource(source);
         RuleModel model = new RuleModel();
         buildIdentity(model, legado);
         buildHttp(model, legado);
@@ -88,6 +125,126 @@ public class RuleCompiler {
         id.setEnabled(legado.path("enabled").asBoolean(true));
     }
 
+    private JsonNode normalizeSource(JsonNode source) {
+        if (!isNativeFormat(source)) {
+            return source;
+        }
+        ObjectNode legado = LENIENT.createObjectNode();
+        legado.put("bookSourceName", textOrDefault(source, "sourceName", text(source, "sourceUrl")));
+        legado.put("bookSourceUrl", text(source, "sourceUrl"));
+        legado.put("bookSourceGroup", text(source, "sourceName"));
+        legado.put("bookSourceType", nativeBookType(source.path("sourceType").asText("text")));
+        legado.put("enabled", source.path("enable").asInt(1) == 1);
+        legado.put("weight", source.path("weight").asText("0"));
+        ObjectNode header = LENIENT.createObjectNode();
+        JsonNode httpHeaders = source.get("httpHeaders");
+        if (httpHeaders != null && httpHeaders.isObject()) {
+            httpHeaders.fields().forEachRemaining(f -> header.put(f.getKey(), sanitizeHeader(f.getKey(), f.getValue().asText())));
+        }
+        legado.put("header", header.toString());
+
+        for (Map.Entry<String, String> entry : NATIVE_ACTION_MAP.entrySet()) {
+            JsonNode nativeAction = source.get(entry.getValue());
+            if (nativeAction == null || !nativeAction.isObject()) {
+                continue;
+            }
+            ObjectNode action = LENIENT.createObjectNode();
+            String listField = NATIVE_LIST_FIELD_MAP.get(entry.getKey());
+            if (listField != null && nativeAction.hasNonNull(listField)) {
+                String legadoListField = "toc".equals(entry.getKey()) ? "chapterList" : "bookList";
+                action.put(legadoListField, nativeAction.get(listField).asText());
+            }
+            nativeAction.fields().forEachRemaining(f -> {
+                if (NATIVE_ACTION_CONFIG_FIELDS.contains(f.getKey()) || f.getKey().equals(listField)) {
+                    return;
+                }
+                String targetName = NATIVE_FIELD_NAME_MAP.get(f.getKey());
+                if (targetName != null && f.getValue() != null && !f.getValue().isNull()) {
+                    action.put(targetName, f.getValue().asText());
+                }
+            });
+            legado.set(ACTION_MAP.get(entry.getKey())[0], action);
+            RequestSpec request = nativeRequest(nativeAction, entry.getKey(), source);
+            if (request != null && StringUtils.hasText(request.getUrlTemplate())) {
+                action.set("__request", LENIENT.valueToTree(request));
+            }
+        }
+        return legado;
+    }
+
+    private boolean isNativeFormat(JsonNode source) {
+        return source != null && source.has("sourceUrl") && (source.has("searchBook") || source.has("bookDetail"));
+    }
+
+    private static int nativeBookType(String sourceType) {
+        if ("audio".equalsIgnoreCase(sourceType)) {
+            return 1;
+        }
+        if ("comic".equalsIgnoreCase(sourceType)) {
+            return 2;
+        }
+        return 0;
+    }
+
+    private static String textOrDefault(JsonNode node, String field, String defaultValue) {
+        String value = text(node, field);
+        return StringUtils.hasText(value) ? value : defaultValue;
+    }
+
+    private static String sanitizeHeader(String key, String value) {
+        String lower = key == null ? "" : key.toLowerCase();
+        if (lower.contains("authorization") || lower.contains("cookie") || lower.contains("token")
+                || lower.contains("device")) {
+            return "<redacted>";
+        }
+        return value;
+    }
+
+    private RequestSpec nativeRequest(JsonNode nativeAction, String actionName, JsonNode source) {
+        RequestSpec spec = new RequestSpec();
+        String host = textOrDefault(nativeAction, "host", text(source, "sourceUrl"));
+        String requestInfo = text(nativeAction, "requestInfo");
+        if (!StringUtils.hasText(requestInfo)) {
+            return spec;
+        }
+        if ("search".equals(actionName)) {
+            spec.setUrlTemplate((StringUtils.hasText(host) ? host : "") + "/search?keyword={{key}}&type=2&page={{page}}");
+        } else if ("detail".equals(actionName)) {
+            spec.setUrlTemplate(resolveNativeTemplate(host, requestInfo, "/novel/{{detailUrl}}?isSearch=0"));
+        } else if ("toc".equals(actionName)) {
+            spec.setUrlTemplate(resolveNativeTemplate(host, requestInfo, "/novel/{{detailUrl}}/chapters"));
+        } else if ("content".equals(actionName)) {
+            spec.setUrlTemplate("{{chapterUrl}}");
+        }
+        JsonNode httpHeaders = source.get("httpHeaders");
+        if (httpHeaders != null && httpHeaders.isObject()) {
+            httpHeaders.fields().forEachRemaining(f -> spec.getHeaders().put(f.getKey(), sanitizeHeader(f.getKey(), f.getValue().asText())));
+        }
+        return spec;
+    }
+
+    private static String resolveNativeTemplate(String host, String requestInfo, String fallbackPath) {
+        String base = StringUtils.hasText(host) ? host : "";
+        String template = fallbackPath;
+        String marker = "url: '";
+        int start = requestInfo.indexOf(marker);
+        if (start >= 0) {
+            int valueStart = start + marker.length();
+            int valueEnd = requestInfo.indexOf("'", valueStart);
+            if (valueEnd > valueStart) {
+                template = requestInfo.substring(valueStart, valueEnd)
+                        .replace("' + encodeURIComponent(params.keyWord) + '", "{{key}}")
+                        .replace("' + (params.pageIndex || 1)", "{{page}}")
+                        .replace("' + nid + '", "{{detailUrl}}")
+                        .replace("' + nid", "{{detailUrl}}");
+            }
+        }
+        if (template.startsWith("http://") || template.startsWith("https://") || template.startsWith("{{")) {
+            return template;
+        }
+        return base + template;
+    }
+
     private ActionRule buildAction(JsonNode group, String listField) {
         ActionRule action = new ActionRule();
         String inferSample = null;
@@ -97,9 +254,19 @@ public class RuleCompiler {
             action.setList(parser.parse(raw));
             inferSample = raw;
         }
+        if (group.has("__request")) {
+            try {
+                action.setRequest(LENIENT.treeToValue(group.get("__request"), RequestSpec.class));
+            } catch (Exception ignored) {
+                // Invalid native request metadata is handled later as a missing request.
+            }
+        }
         var it = group.fields();
         while (it.hasNext()) {
             Map.Entry<String, JsonNode> f = it.next();
+            if ("__request".equals(f.getKey())) {
+                continue;
+            }
             if (f.getKey().equals(listField) || f.getValue() == null || f.getValue().isNull()) {
                 continue;
             }
@@ -145,6 +312,9 @@ public class RuleCompiler {
 
     /** 动作级请求规格：searchUrl / exploreUrl → RequestSpec（URL 主体 + 逗号后选项 JSON） */
     private void buildRequest(ActionRule action, String actionName, JsonNode legado, RuleModel.Health health) {
+        if (action.getRequest() != null) {
+            return;
+        }
         String urlField = ACTION_URL_MAP.get(actionName);
         if (urlField == null) {
             return;

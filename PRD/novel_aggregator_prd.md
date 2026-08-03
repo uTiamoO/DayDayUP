@@ -3,7 +3,6 @@
 > **本文件定位**：本 PRD 是「高性能小说聚合搜索与阅读平台」的**产品需求层**（WHAT / WHY + 对外契约 + 验收标准）。
 > **路线重定稿（2026-07-09）**：平台不再以“导入开源阅读书源并逐条解析执行”为主线；开源阅读/Legado 书源只作为站点覆盖、字段命名、API 入口和 URL 模板的参考素材。具体解析、拆解、合并、广告移除、正文净化、质量评估、缓存与高可用治理均由 DayDayUP 平台自行设计和实现。
 > **技术设计以下列规格为权威来源（HOW）**，本文不重复设计细节；既有 reading spec 中与 v3.0 路线冲突的“直接导入并执行外部书源/RuleModel”内容需在后续规格重构中废弃或降级为迁移参考：
-> - `.trellis/spec/backend/reading-api-contracts.md`（当前可执行 API 契约，需随 v3.0 后续切片增补聚合编排/密钥限流/健康状态契约）
 > - `docs/superpowers/specs/2026-07-02-reading-api-platform-design.md`（历史架构参考，待重构）
 > - `docs/superpowers/specs/2026-07-02-reading-rulemodel-v1.md`（历史 RuleModel 参考，v3.0 不作为主线）
 > - `docs/superpowers/specs/2026-07-02-reading-js-engine-decision.md`（历史运行时参考）
@@ -112,14 +111,16 @@
 | ---- | ---- | ---- | ---- |
 | GET | `/search` | 搜索作品（聚合 / 指定源） | `keyword,page,pageSize,category,completionStatus,mode=aggregate\|source,sourceId` |
 | GET | `/works` | 作品列表 | `category,status,sort,sourceId,page,pageSize` |
-| GET | `/works/{workId}` | 作品详情（可用来源摘要） | — |
+| GET | `/works/{workId}` | 作品详情（可用来源摘要） | `sourceId,refreshPolicy=cache-first\|force-refresh` |
 | GET | `/works/{workId}/sources` | 作品可用来源（可选） | — |
 | GET | `/works/{workId}/chapters` | 章节列表 | `sourceId,page,pageSize,refreshPolicy=cache-first\|force-refresh` |
 | GET | `/chapters/{chapterId}/content` | 章节正文 | `sourceId,contentVersion=latest\|raw\|normalized\|sanitized,fetchPolicy=cache-first\|force-refresh` |
 
 - 搜索返回：作品候选列表 + 聚合摘要 + 命中来源数 + 分页。**聚合模式返回候选聚合结果，不强行声明唯一真相**（保守归并，见 §5）。
 - 聚合搜索响应需要面向调用方或运营侧提供 `source_time_cost` 类观测信息：每个来源的耗时、缓存命中、结果数量、状态/禁用原因；单源失败以降级信息体现，不应导致整体搜索不可用。
-- 正文：**Public 默认返回 `sanitized`**；内部接口可查看其它版本。缺失回源为同步阻塞时整链路上限 ~10s，超时返回 `UPSTREAM_TIMEOUT` 并落补抓任务，客户端可稍后重查。
+- 详情：默认 `cache-first`，完整缓存直接返回；缓存不完整时自动从主来源回源。`force-refresh` 可刷新指定来源，未指定时使用主来源；只有主来源可更新统一作品元数据，副来源仅更新自身绑定信息。
+- 目录：默认 `cache-first`，但空目录或指定来源没有章节绑定时会自动同步；`force-refresh` 仍要求 `sourceId` 并强制同步该来源。
+- 正文：**Public 默认返回 `sanitized`**；`cache-first` 在请求版本已缓存时直接返回，缺失必要内容时才回源，已有 raw/normalized 时优先复用缓存完成净化；`force-refresh` 强制重新抓取指定来源。同步回源整链路上限 ~10s，超时返回 `UPSTREAM_TIMEOUT` 并落补抓任务，客户端可稍后重查。
 - P1 会员密钥接入后，正文 API 是访问治理主控制点：读取正文时记录在线状态、IP/设备、阅读次数，并执行密钥等级对应的并发/IP 限制。
 
 ### 4.2 书源定向 API `/api/v1/internal/source-reading`（内网，调试 / 灰度）
@@ -258,7 +259,7 @@
 | 切片 2 · 子片 2a：网络出站 + SSRF + 限速 + 定向 API | ✅ 已完成（`mvn test` 通过，reading 48 测试全绿） | 编译器装配 `RequestSpec/Http`（searchUrl 选项段/宽松 header/concurrentRate，编译器 v1.1）、`HttpFetcher`（OkHttp，手动重定向每跳重校验 + Dns 钩子防 DNS 重绑定）、`SsrfValidator`（60103：同域白名单+私网/回环/CGNAT/ULA 拦截）、`SourceRateLimiter`（并发位+滑动窗口）、`ErrorCode` 补 6xxxx 段、`GET /api/v1/internal/source-reading/{id}/search\|detail`；**O9 已解决**（绕逻辑删除查询 + 恢复语义） |
 | 切片 2 · 子片 2b：GraalJS 脚本执行 | ✅ 已完成（`mvn test` 通过，reading 58 测试全绿） | GraalJS 24.1.2（polyglot + js-community，62MB 依赖树记技术债）、`JsScriptEngine`（共享 Engine + 独立 Context 沙箱 + `Context.interrupt` 看门狗 + `ResourceLimits` 语句数双保险）、`JsBridge`（§7.2 P0 allowlist：ajax/get/put/crypto，`java.ajax` 走 HttpFetcher 统一出口，UI 桥 no-op，allowlist 外 fail-fast）、`RuleExecutor` ScriptStep 接线；AC 验证：死循环被看门狗中断不钉线程、`Java.type` 沙箱拒绝、SSRF 经桥仍拦截 |
 | 切片 3 · 子片 1：内容发现与作品入库 | ✅ 已完成（`mvn test` 通过，reading 68 测试全绿） | `reading_work` / `reading_work_source_binding` 表、`Work` / `WorkSourceBinding` 实体、`MatchKeys`（保守归并键）、`WorkAssemblyService`（find-or-create + 跨源 merged + 幂等重绑）、`ContentDiscoveryService` 编排搜索→入库、`POST /api/v1/internal/ops/works/discover` |
-| 切片 3 · 子片 2：目录与章节资产化 | ✅ 已完成（`mvn test` 通过，reading 75 测试全绿） | `reading_chapter` / `reading_chapter_source_binding` 表、`Chapter` / `ChapterSourceBinding` 实体、`SourceReadingService.toc`、`ChapterAssemblyService`（主来源建统一章节+回填 chapterId、非主来源仅挂绑定、空目录保护、先清后建）、`ChapterSyncService` 编排、`POST /ops/works/{workId}/toc-sync` |
+| 切片 3 · 子片 2：目录与章节资产化 | ✅ 已完成（`mvn test` 通过） | `reading_chapter` / `reading_chapter_source_binding` 表、`Chapter` / `ChapterSourceBinding` 实体、`SourceReadingService.toc`、`ChapterAssemblyService`（主来源建统一章节+回填 chapterId、非主来源按目录序与标题惰性对齐、空目录保护、先清后建）、`ChapterSyncService` 编排、`POST /ops/works/{workId}/toc-sync` |
 | 切片 4：正文抓取与净化 | ✅ 已完成（`mvn test` 通过，reading 94 测试全绿） | 子片 1：`reading_chapter_content_snapshot` 表、`ContentFetchService`（cache-first + 三层 raw/normalized）、`ContentNormalizer`。子片 2：`reading_content_sanitization_run` 表、`SanitizationPipeline`（七段：normalize/detect-noise/transform/quality/publish + trace）、`ContentSanitizeService`（accepted/degraded 发布 sanitized、rejected 不覆盖、archive-run）、`POST /ops/chapters/{id}/content-fetch\|sanitize` |
 | 切片 5：聚合搜索与统一阅读 API | ✅ 已完成（`mvn test` 通过，reading 102 测试全绿） | `ReadingController` 对外 `/api/v1/reading`（search/works/detail/sources/chapters/content），`ReadingQueryService`（mode=aggregate/source、category/completionStatus 过滤、章节 force-refresh 触发目录同步），`ReadingContentService`（latest=sanitized、cache-first 缺净化时复用 raw/normalized 净化、force-refresh 重抓重净化）、读侧 Mapper/VO、网关 `/reading/**` StripPrefix；用户侧 VO 不暴露源站 URL |
 | 切片 6：同步任务与重处理 | ✅ 已完成（`mvn test` 通过，reading 119 测试全绿） | `reading_task` 表、`ReadingTask` 实体/Mapper、`ReadingTaskService`（submit/get/page/cancel/acquire/success/partial/failure retry）、`ReadingTaskExecutor`（复用 import/compile/discover/toc/fetch/sanitize 既有服务）、`ReadingTaskWorker`（数据库抢占 + 手动/可选定时 drain，默认关闭）、`POST/GET /api/v1/internal/ops/tasks/**` |

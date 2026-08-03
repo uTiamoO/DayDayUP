@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -28,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * {@link ChapterAssemblyService} 单测：内存 map 假实现三表，覆盖主来源建统一章节+绑定、
- * 非主来源仅建绑定（chapterId 空）、空目录保护、先清后建幂等、TocEntry 归一化。
+ * 非主来源惰性对齐既有章节、空目录保护、先清后建幂等、TocEntry 归一化。
  */
 class ChapterAssemblyServiceTest {
 
@@ -63,6 +62,10 @@ class ChapterAssemblyServiceTest {
             long wid = inv.getArgument(0);
             chapters.removeIf(c -> c.getWorkId().equals(wid));
             return 1;
+        });
+        when(chapterMapper.selectByWorkId(anyLong())).thenAnswer(inv -> {
+            long wid = inv.getArgument(0);
+            return chapters.stream().filter(c -> c.getWorkId().equals(wid)).toList();
         });
 
         doAnswer(inv -> {
@@ -110,14 +113,17 @@ class ChapterAssemblyServiceTest {
     }
 
     @Test
-    void nonPrimaryBuildsOnlyBindingsWithNullChapterId() {
+    void nonPrimaryAlignsBindingsToExistingChapters() {
+        service.syncToc(1L, 10L, true, toc(2));
+        bindings.clear();
+
         TocSyncResultVO r = service.syncToc(1L, 20L, false, toc(2));
 
         assertEquals(0, r.getChaptersBuilt());
         assertEquals(2, r.getBindingsBuilt());
-        assertTrue(chapters.isEmpty());
-        assertNull(bindings.get(0).getChapterId());
-        assertEquals(80, bindings.get(0).getBindingConfidence());
+        assertEquals(2, chapters.size());
+        assertEquals(chapters.get(0).getId(), bindings.get(0).getChapterId());
+        assertEquals(100, bindings.get(0).getBindingConfidence());
     }
 
     @Test

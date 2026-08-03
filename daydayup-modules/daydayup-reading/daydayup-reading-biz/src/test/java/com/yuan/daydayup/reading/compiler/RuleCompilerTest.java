@@ -1,12 +1,17 @@
 package com.yuan.daydayup.reading.compiler;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuan.daydayup.reading.compiler.model.CompileGrade;
 import com.yuan.daydayup.reading.compiler.model.RuleModel;
 import com.yuan.daydayup.reading.compiler.parser.RuleStringParser;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -16,6 +21,48 @@ class RuleCompilerTest {
 
     private final ObjectMapper om = new ObjectMapper();
     private final RuleCompiler compiler = new RuleCompiler(new RuleStringParser());
+
+    @Test
+    void compilesProjectNativeSourceFormatToExecutableRuleModel() throws Exception {
+        String json = Files.readString(projectRoot().resolve("docs/书源/maoyankanshu.json"));
+        JsonNode root = om.readTree(json);
+        JsonNode source = root.path("maoyankanshu");
+
+        RuleModel model = compiler.compile(source);
+
+        assertEquals("maoyankanshu", model.getIdentity().getName());
+        assertEquals("http://api.jmlldsc.com", model.getIdentity().getBaseUrl());
+        assertEquals("text", model.getIdentity().getBookType());
+        assertTrue(model.getIdentity().isEnabled());
+
+        assertNotNull(model.getActions().get("search").getRequest());
+        assertEquals("json", model.getActions().get("search").getResponseType());
+        assertEquals("$.data", model.getActions().get("search").getList().getRaw());
+        assertEquals("$.novelName", model.getActions().get("search").getFields().get("name").getRaw());
+        assertTrue(model.getActions().get("search").getRequest().getUrlTemplate().contains("keyword={{key}}"));
+
+        assertEquals("json", model.getActions().get("detail").getResponseType());
+        assertEquals("$.data.novelName", model.getActions().get("detail").getFields().get("name").getRaw());
+        assertTrue(model.getActions().get("detail").getRequest().getUrlTemplate().contains("/novel/{{detailUrl}}"));
+
+        assertEquals("json", model.getActions().get("toc").getResponseType());
+        assertEquals("$.data.list", model.getActions().get("toc").getList().getRaw());
+        assertTrue(model.getActions().get("toc").getRequest().getUrlTemplate().contains("/novel/{{detailUrl}}/chapters"));
+
+        assertEquals("json", model.getActions().get("content").getResponseType());
+        assertTrue(model.getActions().get("content").getRequest().getUrlTemplate().contains("{{chapterUrl}}"));
+        assertEquals("$.content", model.getActions().get("content").getFields().get("content").getRaw());
+        assertEquals("<redacted>", model.getHttp().getHeaders().get("Authorization"));
+    }
+
+    private static Path projectRoot() {
+        Path current = Path.of("").toAbsolutePath();
+        while (current != null && !Files.exists(current.resolve("docs/书源/maoyankanshu.json"))) {
+            current = current.getParent();
+        }
+        assertNotNull(current, "project root with docs/书源/maoyankanshu.json should exist");
+        return current;
+    }
 
     @Test
     void fullGrade_whenAllNativeMappable() throws Exception {

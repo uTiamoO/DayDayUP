@@ -14,11 +14,14 @@ import com.yuan.daydayup.reading.runtime.engine.TemplateRenderer;
 import com.yuan.daydayup.reading.runtime.http.HttpFetcher;
 import com.yuan.daydayup.reading.runtime.script.JsBridge;
 import com.yuan.daydayup.reading.runtime.script.JsScriptEngine;
+import com.yuan.daydayup.reading.runtime.service.NativeSourceReadingService;
 import com.yuan.daydayup.reading.runtime.service.SourceReadingService;
 import com.yuan.daydayup.reading.source.entity.SourceCompiledRule;
 import com.yuan.daydayup.reading.source.entity.SourceDefinition;
 import com.yuan.daydayup.reading.source.mapper.SourceCompiledRuleMapper;
 import com.yuan.daydayup.reading.source.mapper.SourceDefinitionMapper;
+import com.yuan.daydayup.reading.source.nativeparser.NativeSourceParser;
+import com.yuan.daydayup.reading.source.nativeparser.NativeSourceParserRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,6 +32,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 书源定向读取实现：加载编译产物 RuleModel → 请求构造（模板渲染 + 同域解析）
@@ -38,31 +42,67 @@ import java.util.Map;
 @Service
 public class SourceReadingServiceImpl implements SourceReadingService {
 
+    /** 原生书源来源格式标记（SourceDefinition.originType）。 */
+    private static final String ORIGIN_NATIVE = "native";
+
     private final SourceDefinitionMapper sourceMapper;
     private final SourceCompiledRuleMapper compiledMapper;
     private final HttpFetcher httpFetcher;
     private final RuleExecutor ruleExecutor;
     private final JsScriptEngine jsScriptEngine;
     private final ObjectMapper objectMapper;
+    private final NativeSourceParserRegistry nativeParserRegistry;
+    private final NativeSourceReadingService nativeSourceReadingService;
 
     public SourceReadingServiceImpl(SourceDefinitionMapper sourceMapper,
                                     SourceCompiledRuleMapper compiledMapper,
                                     HttpFetcher httpFetcher,
                                     RuleExecutor ruleExecutor,
                                     JsScriptEngine jsScriptEngine,
-                                    ObjectMapper objectMapper) {
+                                    ObjectMapper objectMapper,
+                                    NativeSourceParserRegistry nativeParserRegistry,
+                                    NativeSourceReadingService nativeSourceReadingService) {
         this.sourceMapper = sourceMapper;
         this.compiledMapper = compiledMapper;
         this.httpFetcher = httpFetcher;
         this.ruleExecutor = ruleExecutor;
         this.jsScriptEngine = jsScriptEngine;
         this.objectMapper = objectMapper;
+        this.nativeParserRegistry = nativeParserRegistry;
+        this.nativeSourceReadingService = nativeSourceReadingService;
+    }
+
+    /**
+     * 若来源为原生书源（originType=native 且注册表命中），返回其解析器；否则空。
+     * 命中则走自研 native 主线，未命中回落 legacy RuleModel。
+     */
+    private Optional<NativeParsed> nativeParserFor(Long sourceId) {
+        SourceDefinition source = sourceMapper.selectById(sourceId);
+        if (source == null) {
+            throw new BizException(ErrorCode.DATA_NOT_FOUND, "书源不存在: " + sourceId);
+        }
+        if (!ORIGIN_NATIVE.equalsIgnoreCase(source.getOriginType())) {
+            return Optional.empty();
+        }
+        NativeSourceParser parser = nativeParserRegistry.find(source.getTags())
+                .or(() -> nativeParserRegistry.findByBaseUrl(source.getBookSourceUrl()))
+                .orElseThrow(() -> new BizException(ErrorCode.READING_SOURCE_NOT_AVAILABLE,
+                        "原生书源无匹配解析器: " + sourceId + " (" + source.getBookSourceUrl() + ")"));
+        return Optional.of(new NativeParsed(source, parser));
+    }
+
+    private record NativeParsed(SourceDefinition source, NativeSourceParser parser) {
     }
 
     @Override
     public DirectedReadVO search(Long sourceId, String keyword, int page) {
         if (!StringUtils.hasText(keyword)) {
             throw new BizException(ErrorCode.READING_INVALID_ARGUMENT, "keyword 不能为空");
+        }
+        Optional<NativeParsed> nativeParsed = nativeParserFor(sourceId);
+        if (nativeParsed.isPresent()) {
+            NativeParsed np = nativeParsed.get();
+            return nativeSourceReadingService.search(np.source(), np.parser(), keyword, page);
         }
         Loaded loaded = load(sourceId);
         ActionRule action = requireAction(loaded.model(), "search");
@@ -101,6 +141,11 @@ public class SourceReadingServiceImpl implements SourceReadingService {
         if (!StringUtils.hasText(bookUrl)) {
             throw new BizException(ErrorCode.READING_INVALID_ARGUMENT, "bookUrl 不能为空");
         }
+        Optional<NativeParsed> nativeParsed = nativeParserFor(sourceId);
+        if (nativeParsed.isPresent()) {
+            NativeParsed np = nativeParsed.get();
+            return nativeSourceReadingService.detail(np.source(), np.parser(), bookUrl);
+        }
         Loaded loaded = load(sourceId);
         ActionRule action = requireAction(loaded.model(), "detail");
         String url = resolveUrl(loaded.baseUrl(), bookUrl);
@@ -126,6 +171,11 @@ public class SourceReadingServiceImpl implements SourceReadingService {
         if (!StringUtils.hasText(tocUrl)) {
             throw new BizException(ErrorCode.READING_INVALID_ARGUMENT, "tocUrl 不能为空");
         }
+        Optional<NativeParsed> nativeParsed = nativeParserFor(sourceId);
+        if (nativeParsed.isPresent()) {
+            NativeParsed np = nativeParsed.get();
+            return nativeSourceReadingService.toc(np.source(), np.parser(), tocUrl);
+        }
         Loaded loaded = load(sourceId);
         ActionRule action = requireAction(loaded.model(), "toc");
         String url = resolveUrl(loaded.baseUrl(), tocUrl);
@@ -150,6 +200,11 @@ public class SourceReadingServiceImpl implements SourceReadingService {
     public DirectedReadVO content(Long sourceId, String contentUrl) {
         if (!StringUtils.hasText(contentUrl)) {
             throw new BizException(ErrorCode.READING_INVALID_ARGUMENT, "contentUrl 不能为空");
+        }
+        Optional<NativeParsed> nativeParsed = nativeParserFor(sourceId);
+        if (nativeParsed.isPresent()) {
+            NativeParsed np = nativeParsed.get();
+            return nativeSourceReadingService.content(np.source(), np.parser(), contentUrl);
         }
         Loaded loaded = load(sourceId);
         ActionRule action = requireAction(loaded.model(), "content");

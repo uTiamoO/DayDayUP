@@ -106,4 +106,28 @@ class SsrfValidatorTest {
         v.setResolver(host -> new InetAddress[]{ip("127.0.0.1")});
         assertDoesNotThrow(() -> v.validate("http://127.0.0.1:9999/x", "http://127.0.0.1:9999"));
     }
+
+    @Test
+    void proxyModeSkipsLocalDnsResolution() {
+        // 翻墙场景：本地 DNS 解不出被墙域名，代理开启时应跳过本地解析，只保留同域校验。
+        ReadingHttpProperties props = new ReadingHttpProperties();
+        props.getProxy().setEnabled(true);
+        SsrfValidator v = new SsrfValidator(props);
+        v.setResolver(host -> {
+            throw new java.net.UnknownHostException("本地解析被污染: " + host);
+        });
+        assertDoesNotThrow(() -> v.validate(
+                "https://www.69shuba.com/modules/article/search.php", "https://www.69shuba.com"));
+    }
+
+    @Test
+    void proxyModeStillBlocksCrossDomain() {
+        // 代理模式下同域校验仍生效，防止书源规则跳到任意站点。
+        ReadingHttpProperties props = new ReadingHttpProperties();
+        props.getProxy().setEnabled(true);
+        SsrfValidator v = new SsrfValidator(props);
+        BizException e = assertThrows(BizException.class, () ->
+                v.validate("https://evil.com/x", "https://www.69shuba.com"));
+        assertEquals(BLOCKED, e.getCode());
+    }
 }

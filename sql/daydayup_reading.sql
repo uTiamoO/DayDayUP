@@ -1,4 +1,20 @@
 -- DayDayUP Reading schema additions for slice 6 task/reprocessing.
+--
+-- Usage:
+--   mysql -h <host> -P <port> -u root -p < sql/daydayup_reading.sql
+--
+-- Notes:
+--   1. Run as a privileged account when bootstrapping a new environment.
+--   2. The application account is expected to already exist; this script grants
+--      DML permissions only and does not create users or store passwords.
+--   3. If the application account is not named `ddup`, adjust the GRANT target
+--      before executing.
+
+CREATE DATABASE IF NOT EXISTS `daydayup_reading`
+  DEFAULT CHARACTER SET utf8mb4
+  DEFAULT COLLATE utf8mb4_unicode_ci;
+
+USE `daydayup_reading`;
 
 CREATE TABLE IF NOT EXISTS `reading_task` (
   `id` BIGINT NOT NULL COMMENT '雪花主键',
@@ -24,3 +40,8 @@ CREATE TABLE IF NOT EXISTS `reading_task` (
   KEY `idx_task_acquire` (`task_status`, `next_run_at`, `locked_at`, `deleted`),
   KEY `idx_task_page` (`task_type`, `task_status`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅读任务表';
+
+-- Application user permissions.
+-- Keep password management outside repository. If user/host differs, replace `ddup`@`%` accordingly.
+GRANT SELECT, INSERT, UPDATE, DELETE ON `daydayup_reading`.* TO `ddup`@`%`;
+FLUSH PRIVILEGES;

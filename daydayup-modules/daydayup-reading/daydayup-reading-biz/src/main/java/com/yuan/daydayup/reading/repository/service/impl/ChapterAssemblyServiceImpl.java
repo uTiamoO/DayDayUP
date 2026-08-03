@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,8 +23,8 @@ import java.util.Map;
  * 章节装配实现（spec §5.3）。
  *
  * <p>先清后建：删除本源旧目录绑定；主来源另删并重建统一 Chapter（chapterIndex = 目录序）
- * 并回填绑定的 chapterId。第一期不做跨源章节对齐——非主来源仅保留 per-source 目录绑定，
- * {@code chapterId} 留空待惰性对齐。</p>
+ * 并回填绑定的 chapterId。非主来源按“相同目录序 + 规整标题”优先、唯一标题兜底，
+ * 惰性对齐到既有统一章节。</p>
  *
  * <p>空目录保护：抓取为空时不删除既有数据（避免瞬时解析失败摧毁已入库目录）。</p>
  */
@@ -68,6 +69,8 @@ public class ChapterAssemblyServiceImpl implements ChapterAssemblyService {
             }
             result.setChaptersBuilt(entries.size());
             updateWorkLatest(workId, entries.get(entries.size() - 1).title());
+        } else {
+            alignExistingChapters(workId, entries, orderToChapterId);
         }
 
         // 所有来源：重建 per-source 目录绑定
@@ -79,6 +82,33 @@ public class ChapterAssemblyServiceImpl implements ChapterAssemblyService {
         }
         result.setBindingsBuilt(entries.size());
         return result;
+    }
+
+    private void alignExistingChapters(Long workId, List<TocEntry> entries, Map<Integer, Long> orderToChapterId) {
+        List<Chapter> existing = chapterMapper.selectByWorkId(workId);
+        Map<String, List<Chapter>> chaptersByTitle = new HashMap<>();
+        for (Chapter chapter : existing) {
+            chaptersByTitle.computeIfAbsent(normalizeTitle(chapter.getChapterTitle()), key -> new ArrayList<>())
+                    .add(chapter);
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            String title = normalizeTitle(entries.get(i).title());
+            if (i < existing.size()) {
+                Chapter sameOrder = existing.get(i);
+                if (title.equals(normalizeTitle(sameOrder.getChapterTitle()))) {
+                    orderToChapterId.put(i, sameOrder.getId());
+                    continue;
+                }
+            }
+            List<Chapter> sameTitle = chaptersByTitle.get(title);
+            if (sameTitle != null && sameTitle.size() == 1) {
+                orderToChapterId.put(i, sameTitle.get(0).getId());
+            }
+        }
+    }
+
+    private String normalizeTitle(String title) {
+        return title == null ? "" : title.replaceAll("[\\s\\p{Punct}，。！？：；、‘’“”《》（）【】]+", "");
     }
 
     private Chapter newChapter(Long workId, TocEntry entry, int index) {

@@ -11,9 +11,12 @@ import com.yuan.daydayup.reading.runtime.http.HttpFetcher;
 import com.yuan.daydayup.reading.runtime.http.ReadingHttpProperties;
 import com.yuan.daydayup.reading.runtime.http.SourceRateLimiter;
 import com.yuan.daydayup.reading.runtime.http.SsrfValidator;
+import com.yuan.daydayup.reading.observability.ReadingMetrics;
 import com.yuan.daydayup.reading.runtime.script.JsScriptEngine;
 import com.yuan.daydayup.reading.runtime.script.ReadingScriptProperties;
+import com.yuan.daydayup.reading.runtime.service.impl.NativeSourceReadingServiceImpl;
 import com.yuan.daydayup.reading.runtime.service.impl.SourceReadingServiceImpl;
+import com.yuan.daydayup.reading.source.nativeparser.NativeSourceParserRegistry;
 import com.yuan.daydayup.reading.source.entity.SourceCompiledRule;
 import com.yuan.daydayup.reading.source.entity.SourceDefinition;
 import com.yuan.daydayup.reading.source.mapper.SourceCompiledRuleMapper;
@@ -25,10 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -64,12 +69,16 @@ class SourceReadingServiceTest {
         ReadingHttpProperties props = new ReadingHttpProperties();
         props.setAllowPrivate(true);          // MockWebServer 在 127.0.0.1
         props.setDefaultMinIntervalMs(1);
-        HttpFetcher fetcher = new HttpFetcher(props, new SsrfValidator(props), new SourceRateLimiter(props));
+        HttpFetcher fetcher = new HttpFetcher(props, new SsrfValidator(props), new SourceRateLimiter(props),
+                new ReadingMetrics(new io.micrometer.core.instrument.simple.SimpleMeterRegistry()));
 
         sourceMapper = mock(SourceDefinitionMapper.class);
         compiledMapper = mock(SourceCompiledRuleMapper.class);
+        NativeSourceParserRegistry nativeRegistry =
+                new NativeSourceParserRegistry(java.util.List.of());
+        NativeSourceReadingService nativeService = new NativeSourceReadingServiceImpl(fetcher);
         service = new SourceReadingServiceImpl(sourceMapper, compiledMapper, fetcher,
-                new RuleExecutor(), jsEngine, om);
+                new RuleExecutor(), jsEngine, om, nativeRegistry, nativeService);
     }
 
     @AfterEach
@@ -215,5 +224,38 @@ class SourceReadingServiceTest {
 
         DirectedReadVO vo = service.search(2L, "仙", 1);
         assertEquals("仙逆_js", vo.getRecords().get(0).get("name"));
+    }
+
+    @Test
+    void nativeSourceBypassesCompiledRuleAndUsesRegisteredParser() {
+        SourceDefinition nativeSource = new SourceDefinition();
+        nativeSource.setId(7L);
+        nativeSource.setName("原生测试源");
+        nativeSource.setOriginType("native");
+        nativeSource.setTags("native-test");
+        nativeSource.setBookSourceUrl(base);
+        when(sourceMapper.selectById(7L)).thenReturn(nativeSource);
+
+        com.yuan.daydayup.reading.source.nativeparser.NativeSourceParser parser =
+                mock(com.yuan.daydayup.reading.source.nativeparser.NativeSourceParser.class);
+        when(parser.sourceKey()).thenReturn("native-test");
+        NativeSourceReadingService nativeService = mock(NativeSourceReadingService.class);
+        DirectedReadVO expected = new DirectedReadVO();
+        expected.setRecords(java.util.List.of(java.util.Map.of("name", "凡人修仙传")));
+        when(nativeService.search(nativeSource, parser, "凡人", 1)).thenReturn(expected);
+
+        SourceReadingService nativeReadingService = new SourceReadingServiceImpl(
+                sourceMapper, compiledMapper,
+                new HttpFetcher(new ReadingHttpProperties(),
+                        new SsrfValidator(new ReadingHttpProperties()),
+                        new SourceRateLimiter(new ReadingHttpProperties()),
+                        new ReadingMetrics(new io.micrometer.core.instrument.simple.SimpleMeterRegistry())),
+                new RuleExecutor(), jsEngine, om,
+                new NativeSourceParserRegistry(java.util.List.of(parser)), nativeService);
+
+        DirectedReadVO actual = nativeReadingService.search(7L, "凡人", 1);
+
+        assertSame(expected, actual);
+        verifyNoInteractions(compiledMapper);
     }
 }

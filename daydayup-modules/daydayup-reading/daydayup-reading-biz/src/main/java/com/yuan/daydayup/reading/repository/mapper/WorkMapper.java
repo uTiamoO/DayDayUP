@@ -7,6 +7,9 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 统一作品 Mapper
  */
@@ -45,4 +48,16 @@ public interface WorkMapper extends BaseMapper<Work> {
                                  @Param("status") String status,
                                  @Param("sourceId") Long sourceId,
                                  @Param("sort") String sort);
+
+    /** 分类筛选元数据。 */
+    @Select("SELECT category_name AS name, COUNT(1) AS count FROM reading_work "
+            + "WHERE deleted = 0 AND category_name IS NOT NULL AND category_name <> '' "
+            + "GROUP BY category_name ORDER BY count DESC, category_name ASC LIMIT #{limit}")
+    List<Map<String, Object>> selectCategoryCounts(@Param("limit") int limit);
+
+    /** 完结状态筛选元数据。 */
+    @Select("SELECT completion_status AS name, COUNT(1) AS count FROM reading_work "
+            + "WHERE deleted = 0 AND completion_status IS NOT NULL AND completion_status <> '' "
+            + "GROUP BY completion_status ORDER BY count DESC, completion_status ASC")
+    List<Map<String, Object>> selectCompletionStatusCounts();
 }

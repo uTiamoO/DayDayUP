@@ -95,3 +95,13 @@ export interface OperLogQuery {
 export interface ApiKeyCreateResult {
   [key: string]: string;
 }
+
+/**
+ * 仪表盘统计（对齐后端 DashboardStatsVO）
+ */
+export interface DashboardStats {
+  userCount: number;
+  roleCount: number;
+  menuCount: number;
+  dictCount: number;
+}

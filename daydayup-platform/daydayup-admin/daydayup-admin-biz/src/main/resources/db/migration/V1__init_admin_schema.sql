@@ -1,0 +1,296 @@
+-- Admin schema initialization managed by Flyway.
+-- Notes:
+-- 1. The database itself must already exist and be reachable by the datasource user.
+-- 2. Existing manually initialized non-empty databases are adopted via baseline-on-migrate.
+
+-- ============================================================
+-- sys_user：用户
+-- ============================================================
+CREATE TABLE `sys_user` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `username`       VARCHAR(64)  NOT NULL COMMENT '用户名',
+    `password`       VARCHAR(128) NOT NULL COMMENT 'BCrypt 加密后的密码',
+    `nickname`       VARCHAR(64)  NULL     COMMENT '昵称',
+    `email`          VARCHAR(128) NULL     COMMENT '邮箱',
+    `mobile`         VARCHAR(32)  NULL     COMMENT '手机号',
+    `avatar`         VARCHAR(256) NULL     COMMENT '头像 URL',
+    `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `last_login_at`  DATETIME     NULL     COMMENT '最近一次登录时间',
+    `last_login_ip`  VARCHAR(64)  NULL     COMMENT '最近一次登录 IP',
+    `remark`         VARCHAR(256) NULL     COMMENT '备注',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_username` (`username`),
+    KEY `idx_mobile` (`mobile`),
+    KEY `idx_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
+
+-- ============================================================
+-- sys_role：角色
+-- ============================================================
+CREATE TABLE `sys_role` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `code`           VARCHAR(64)  NOT NULL COMMENT '角色编码',
+    `name`           VARCHAR(64)  NOT NULL COMMENT '角色名称',
+    `sort`           INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `remark`         VARCHAR(256) NULL     COMMENT '备注',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色';
+
+-- ============================================================
+-- sys_user_role：用户-角色关联
+-- ============================================================
+CREATE TABLE `sys_user_role` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `user_id`        BIGINT       NOT NULL COMMENT '用户 ID',
+    `role_id`        BIGINT       NOT NULL COMMENT '角色 ID',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`),
+    KEY `idx_user` (`user_id`),
+    KEY `idx_role` (`role_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户-角色关联';
+
+-- ============================================================
+-- sys_permission：权限定义（平台级，所有租户共享）
+-- ============================================================
+CREATE TABLE `sys_permission` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `code`           VARCHAR(128) NOT NULL COMMENT '权限标识（如 admin:user:create）',
+    `name`           VARCHAR(64)  NOT NULL COMMENT '权限名称',
+    `type`           VARCHAR(16)  NOT NULL COMMENT '类型：MENU / BUTTON / API',
+    `parent_id`      BIGINT       NULL     COMMENT '父权限 ID（树形）',
+    `path`           VARCHAR(256) NULL     COMMENT '资源路径（API 模式用 URL）',
+    `sort`           INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `remark`         VARCHAR(256) NULL     COMMENT '备注',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`),
+    KEY `idx_parent` (`parent_id`),
+    KEY `idx_type` (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限定义';
+
+-- ============================================================
+-- sys_role_permission：角色-权限关联
+-- ============================================================
+CREATE TABLE `sys_role_permission` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `role_id`        BIGINT       NOT NULL COMMENT '角色 ID',
+    `permission_id`  BIGINT       NOT NULL COMMENT '权限 ID',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_role_perm` (`role_id`, `permission_id`),
+    KEY `idx_role` (`role_id`),
+    KEY `idx_permission` (`permission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色-权限关联';
+
+-- ============================================================
+-- sys_menu：菜单（平台级）
+-- ============================================================
+CREATE TABLE `sys_menu` (
+    `id`               BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `parent_id`        BIGINT       NOT NULL DEFAULT 0 COMMENT '父菜单 ID（0 表示根）',
+    `code`             VARCHAR(64)  NOT NULL COMMENT '菜单编码',
+    `name`             VARCHAR(64)  NOT NULL COMMENT '菜单名称',
+    `path`             VARCHAR(256) NULL     COMMENT '前端路由 path',
+    `component`        VARCHAR(256) NULL     COMMENT '前端组件路径',
+    `icon`             VARCHAR(64)  NULL     COMMENT '图标',
+    `type`             VARCHAR(16)  NOT NULL COMMENT '类型：DIRECTORY / MENU / BUTTON',
+    `permission_code`  VARCHAR(128) NULL     COMMENT '关联权限编码',
+    `sort`             INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    `visible`          TINYINT      NOT NULL DEFAULT 1 COMMENT '是否可见：0=隐藏，1=可见',
+    `status`           TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `create_time`      DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`      DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`        BIGINT       NULL     COMMENT '创建人',
+    `update_by`        BIGINT       NULL     COMMENT '更新人',
+    `deleted`          TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`),
+    KEY `idx_parent` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜单';
+
+-- ============================================================
+-- sys_dict：字典类型
+-- ============================================================
+CREATE TABLE `sys_dict` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `code`           VARCHAR(64)  NOT NULL COMMENT '字典编码',
+    `name`           VARCHAR(64)  NOT NULL COMMENT '字典名称',
+    `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `remark`         VARCHAR(256) NULL     COMMENT '备注',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典类型';
+
+-- ============================================================
+-- sys_dict_item：字典项
+-- ============================================================
+CREATE TABLE `sys_dict_item` (
+    `id`             BIGINT       NOT NULL COMMENT '主键（雪花算法）',
+    `dict_code`      VARCHAR(64)  NOT NULL COMMENT '所属字典编码',
+    `value`          VARCHAR(64)  NOT NULL COMMENT '值',
+    `label`          VARCHAR(64)  NOT NULL COMMENT '显示文本',
+    `sort`           INT          NOT NULL DEFAULT 0 COMMENT '排序',
+    `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '状态：0=停用，1=启用',
+    `remark`         VARCHAR(256) NULL     COMMENT '备注',
+    `create_time`    DATETIME     NOT NULL COMMENT '创建时间',
+    `update_time`    DATETIME     NOT NULL COMMENT '更新时间',
+    `create_by`      BIGINT       NULL     COMMENT '创建人',
+    `update_by`      BIGINT       NULL     COMMENT '更新人',
+    `deleted`        TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_dict_value` (`dict_code`, `value`),
+    KEY `idx_dict_code` (`dict_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='字典项';
+
+-- ============================================================
+-- sys_oper_log：操作日志
+-- ============================================================
+CREATE TABLE `sys_oper_log` (
+    `id`               BIGINT        NOT NULL COMMENT '主键（雪花算法）',
+    `user_id`          BIGINT        NULL     COMMENT '操作用户 ID',
+    `username`         VARCHAR(64)   NULL     COMMENT '操作用户名',
+    `module`           VARCHAR(64)   NULL     COMMENT '所属模块',
+    `operation`        VARCHAR(128)  NULL     COMMENT '操作描述',
+    `method`           VARCHAR(256)  NULL     COMMENT '方法签名',
+    `request_url`      VARCHAR(512)  NULL     COMMENT '请求 URL',
+    `request_method`   VARCHAR(16)   NULL     COMMENT '请求方法：GET / POST 等',
+    `request_ip`       VARCHAR(64)   NULL     COMMENT '请求 IP',
+    `request_params`   TEXT          NULL     COMMENT '请求参数（可截断）',
+    `response_body`    TEXT          NULL     COMMENT '响应内容（可截断）',
+    `success`          TINYINT       NOT NULL COMMENT '是否成功：0=失败，1=成功',
+    `error_msg`        VARCHAR(1024) NULL     COMMENT '失败信息',
+    `cost_ms`          BIGINT        NULL     COMMENT '耗时（毫秒）',
+    `oper_time`        DATETIME      NOT NULL COMMENT '操作时间',
+    `create_time`      DATETIME      NOT NULL COMMENT '创建时间',
+    `update_time`      DATETIME      NOT NULL COMMENT '更新时间',
+    `create_by`        BIGINT        NULL     COMMENT '创建人',
+    `update_by`        BIGINT        NULL     COMMENT '更新人',
+    `deleted`          TINYINT       NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=正常，1=已删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_user` (`user_id`),
+    KEY `idx_oper_time` (`oper_time`),
+    KEY `idx_module` (`module`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志';
+
+-- ============================================================
+-- 初始种子数据
+-- ============================================================
+-- 密码均为 BCrypt 加密：admin / user
+-- 如需重新生成，运行 org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+
+-- 用户
+INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `status`, `create_time`, `update_time`)
+VALUES
+    (1, 'admin', '$2a$10$8q/bE/Rs5syhpAzbufjvL.ct97ZzkkRfnt4fy/Aqa4GDSRKoql8VG', '管理员', 1, NOW(), NOW()),
+    (2, 'user',  '$2a$10$2usIZSDTm.ACWa.zXTFP7.TVggpGQegm2Z7tqA.RcbmMZAQnj17f.', '普通用户', 1, NOW(), NOW());
+
+-- 角色
+INSERT INTO `sys_role` (`id`, `code`, `name`, `sort`, `status`, `create_time`, `update_time`)
+VALUES
+    (1, 'super_admin', '超级管理员', 1, 1, NOW(), NOW()),
+    (2, 'normal_user', '普通用户',   2, 1, NOW(), NOW());
+
+-- 用户-角色关联
+INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`, `create_time`, `update_time`)
+VALUES
+    (1, 1, 1, NOW(), NOW()),
+    (2, 2, 2, NOW(), NOW());
+
+-- 权限定义
+INSERT INTO `sys_permission` (`id`, `code`, `name`, `type`, `sort`, `status`, `create_time`, `update_time`)
+VALUES
+    (1, 'admin:*',     '管理后台全部权限', 'API', 1, 1, NOW(), NOW()),
+    (2, 'game:*',      '游戏模块全部权限', 'API', 2, 1, NOW(), NOW()),
+    (3, 'game:play',   '游戏-游玩',       'API', 3, 1, NOW(), NOW()),
+    (4, 'social:*',    '社交模块全部权限', 'API', 4, 1, NOW(), NOW()),
+    (5, 'social:read', '社交-只读',       'API', 5, 1, NOW(), NOW());
+
+-- 细粒度管理后台权限（供后续角色授权使用，不绑定超级管理员）
+INSERT INTO `sys_permission` (`id`, `code`, `name`, `type`, `sort`, `status`, `create_time`, `update_time`)
+VALUES
+    (1001, 'admin:user:list', '用户-列表', 'API', 1001, 1, NOW(), NOW()),
+    (1002, 'admin:user:detail', '用户-详情', 'API', 1002, 1, NOW(), NOW()),
+    (1003, 'admin:user:create', '用户-新增', 'API', 1003, 1, NOW(), NOW()),
+    (1004, 'admin:user:update', '用户-修改', 'API', 1004, 1, NOW(), NOW()),
+    (1005, 'admin:user:status', '用户-启停用', 'API', 1005, 1, NOW(), NOW()),
+    (1006, 'admin:user:resetPwd', '用户-重置密码', 'API', 1006, 1, NOW(), NOW()),
+    (1011, 'admin:role:list', '角色-列表', 'API', 1011, 1, NOW(), NOW()),
+    (1012, 'admin:role:detail', '角色-详情', 'API', 1012, 1, NOW(), NOW()),
+    (1013, 'admin:role:create', '角色-新增', 'API', 1013, 1, NOW(), NOW()),
+    (1014, 'admin:role:update', '角色-修改', 'API', 1014, 1, NOW(), NOW()),
+    (1015, 'admin:role:status', '角色-启停用', 'API', 1015, 1, NOW(), NOW()),
+    (1016, 'admin:role:assign', '角色-分配权限', 'API', 1016, 1, NOW(), NOW()),
+    (1021, 'admin:permission:list', '权限-列表', 'API', 1021, 1, NOW(), NOW()),
+    (1022, 'admin:permission:detail', '权限-详情', 'API', 1022, 1, NOW(), NOW()),
+    (1023, 'admin:permission:create', '权限-新增', 'API', 1023, 1, NOW(), NOW()),
+    (1024, 'admin:permission:update', '权限-修改', 'API', 1024, 1, NOW(), NOW()),
+    (1025, 'admin:permission:status', '权限-启停用', 'API', 1025, 1, NOW(), NOW()),
+    (1031, 'admin:menu:list', '菜单-列表', 'API', 1031, 1, NOW(), NOW()),
+    (1032, 'admin:menu:detail', '菜单-详情', 'API', 1032, 1, NOW(), NOW()),
+    (1033, 'admin:menu:create', '菜单-新增', 'API', 1033, 1, NOW(), NOW()),
+    (1034, 'admin:menu:update', '菜单-修改', 'API', 1034, 1, NOW(), NOW()),
+    (1035, 'admin:menu:status', '菜单-启停用', 'API', 1035, 1, NOW(), NOW()),
+    (1036, 'admin:menu:delete', '菜单-删除', 'API', 1036, 1, NOW(), NOW()),
+    (1041, 'admin:dict:list', '字典-列表', 'API', 1041, 1, NOW(), NOW()),
+    (1042, 'admin:dict:detail', '字典-详情', 'API', 1042, 1, NOW(), NOW()),
+    (1043, 'admin:dict:create', '字典-新增', 'API', 1043, 1, NOW(), NOW()),
+    (1044, 'admin:dict:update', '字典-修改', 'API', 1044, 1, NOW(), NOW()),
+    (1045, 'admin:dict:status', '字典-启停用', 'API', 1045, 1, NOW(), NOW()),
+    (1046, 'admin:dict:delete', '字典-删除', 'API', 1046, 1, NOW(), NOW()),
+    (1051, 'admin:dict-item:list', '字典项-列表', 'API', 1051, 1, NOW(), NOW()),
+    (1052, 'admin:dict-item:detail', '字典项-详情', 'API', 1052, 1, NOW(), NOW()),
+    (1053, 'admin:dict-item:create', '字典项-新增', 'API', 1053, 1, NOW(), NOW()),
+    (1054, 'admin:dict-item:update', '字典项-修改', 'API', 1054, 1, NOW(), NOW()),
+    (1055, 'admin:dict-item:status', '字典项-启停用', 'API', 1055, 1, NOW(), NOW()),
+    (1056, 'admin:dict-item:delete', '字典项-删除', 'API', 1056, 1, NOW(), NOW()),
+    (1061, 'admin:oper-log:list', '操作日志-列表', 'API', 1061, 1, NOW(), NOW()),
+    (1062, 'admin:oper-log:detail', '操作日志-详情', 'API', 1062, 1, NOW(), NOW()),
+    (1071, 'admin:apikey:list', 'API密钥-列表', 'API', 1071, 1, NOW(), NOW()),
+    (1072, 'admin:apikey:create', 'API密钥-创建', 'API', 1072, 1, NOW(), NOW()),
+    (1073, 'admin:apikey:revoke', 'API密钥-吊销', 'API', 1073, 1, NOW(), NOW());
+
+-- 角色-权限关联：超级管理员 → admin:*, game:*, social:*
+-- 说明：admin:* 通配已覆盖全部 admin:xxx 细粒度权限（含 user:resetPwd / role:assign / apikey:*），
+-- 无需为超级管理员逐条授予；细粒度权限定义仅供自定义窄角色在角色-权限界面按需分配。
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_time`, `update_time`)
+VALUES
+    (1, 1, 1, NOW(), NOW()),
+    (2, 1, 2, NOW(), NOW()),
+    (3, 1, 4, NOW(), NOW());
+
+-- 角色-权限关联：普通用户 → game:play, social:read
+INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_time`, `update_time`)
+VALUES
+    (4, 2, 3, NOW(), NOW()),
+    (5, 2, 5, NOW(), NOW());

@@ -125,7 +125,7 @@ async function handleLogin() {
   overflow: hidden;
   background-image: 
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.018'/%3E%3C/svg%3E"),
-    linear-gradient(135deg, #eef1f6 0%, #e3e8f0 100%);
+    linear-gradient(135deg, var(--apple-login-gradient-start) 0%, var(--apple-login-gradient-end) 100%);
 }
 
 /* ==========================================================================
@@ -149,6 +149,11 @@ async function handleLogin() {
   opacity: 0.65;
   mix-blend-mode: multiply;
   pointer-events: none;
+}
+
+:global(html.dark) .blob {
+  mix-blend-mode: screen;
+  opacity: 0.45;
 }
 
 /* 魅惑蓝渐变球 */
@@ -225,15 +230,12 @@ async function handleLogin() {
   width: 420px;
   padding: 54px 44px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.45) !important; /* 降低白色配比，折射更多的底层动态光影 */
+  background: var(--apple-login-card-bg) !important; /* 降低白色配比，折射更多的底层动态光影 */
   backdrop-filter: blur(40px) !important; /* 高阶模糊 */
   -webkit-backdrop-filter: blur(40px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid var(--apple-login-card-border) !important;
   /* 双层软阴影，融合微弱的蓝色环境发光 */
-  box-shadow: 
-    0 4px 30px rgba(0, 0, 0, 0.03), 
-    0 1px 3px rgba(0, 0, 0, 0.02),
-    0 30px 70px rgba(0, 122, 255, 0.06) !important;
+  box-shadow: var(--apple-login-card-shadow) !important;
   z-index: 2; /* 浮于渐变球之上 */
 }
 
@@ -247,7 +249,7 @@ async function handleLogin() {
   font-size: 36px;
   font-weight: 800;
   letter-spacing: -1.2px;
-  background: linear-gradient(135deg, #1d1d1f 30%, #007aff 100%);
+  background: linear-gradient(135deg, var(--apple-login-title-start) 30%, var(--apple-login-title-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0 0 10px 0;
@@ -267,15 +269,15 @@ async function handleLogin() {
 :deep(.apple-input .el-input__wrapper) {
   border-radius: 14px;
   padding: 5px 18px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05) inset !important;
-  background-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 0 0 1px var(--apple-login-input-border) inset !important;
+  background-color: var(--apple-login-input-bg) !important;
   backdrop-filter: blur(10px);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 :deep(.apple-input .el-input__wrapper.is-focus) {
-  background-color: rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.7) inset, 0 8px 20px rgba(0, 122, 255, 0.08) !important;
+  background-color: var(--apple-login-input-focus-bg) !important;
+  box-shadow: 0 0 0 2px var(--apple-login-input-focus-ring) inset, 0 8px 20px rgba(0, 122, 255, 0.08) !important;
 }
 
 /* 登录按钮：金属渐变，加入内嵌高光线条，展现苹果拟物化玻璃按钮质感 */

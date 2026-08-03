@@ -24,3 +24,4 @@ export * from './admin/dict-item-api';
 export * from './admin/menu-api';
 export * from './admin/oper-log-api';
 export * from './admin/api-key-api';
+export * from './admin/dashboard-api';

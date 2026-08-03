@@ -4,8 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
@@ -36,6 +34,12 @@ import java.util.List;
 @Configuration(proxyBeanMethods = false)
 public class CorsSecurityWebFilter {
 
+    private final GatewaySecurityProperties gatewaySecurityProperties;
+
+    public CorsSecurityWebFilter(GatewaySecurityProperties gatewaySecurityProperties) {
+        this.gatewaySecurityProperties = gatewaySecurityProperties;
+    }
+
     /**
      * 统一 CORS 过滤器
      *
@@ -44,12 +48,16 @@ public class CorsSecurityWebFilter {
      */
     @Bean
     public CorsWebFilter corsWebFilter() {
+        CorsConfiguration config = createCorsConfiguration();
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return new CorsWebFilter(source);
+    }
+
+    CorsConfiguration createCorsConfiguration() {
         CorsConfiguration config = new CorsConfiguration();
-        // 开发环境默认放行 localhost
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        ));
+        config.setAllowedOriginPatterns(gatewaySecurityProperties.resolveCorsAllowedOriginPatterns());
         config.setAllowedMethods(List.of(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
@@ -61,10 +69,7 @@ public class CorsSecurityWebFilter {
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsWebFilter(source);
+        return config;
     }
 
     /**
@@ -75,7 +80,6 @@ public class CorsSecurityWebFilter {
     @Bean
     public WebFilter securityHeadersFilter() {
         return (ServerWebExchange exchange, WebFilterChain chain) -> {
-            ServerHttpRequest request = exchange.getRequest();
             ServerHttpResponse response = exchange.getResponse();
 
             // 只在正常响应上附加安全头，非 1xx/2xx/3xx 响应由异常处理器处理

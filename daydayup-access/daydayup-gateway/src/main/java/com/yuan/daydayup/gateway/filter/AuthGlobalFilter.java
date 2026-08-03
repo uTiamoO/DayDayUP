@@ -102,9 +102,22 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         String token = authorization.substring(SecurityConstants.BEARER_PREFIX.length()).trim();
 
-        // 3. 异步验签：decode 内部完成签名与时间（exp/nbf）校验，任何失败都会进入 onErrorResume
+        // 3. 异步验签：decode 内部完成签名与时间（exp/nbf）校验。
+        // 只在 decode 阶段把 JWT 错误转成 TOKEN_INVALID，避免吞掉后续下游链路异常。
         return jwtDecoder.decode(token)
-                .flatMap(jwt -> {
+                .materialize()
+                .flatMap(jwtSignal -> {
+                    if (jwtSignal.isOnError()) {
+                        Throwable exception = jwtSignal.getThrowable();
+                        log.warn("JWT 校验失败：{}", exception == null ? "unknown" : exception.getMessage());
+                        return reject(cleanedExchange, ErrorCode.TOKEN_INVALID);
+                    }
+
+                    Jwt jwt = jwtSignal.get();
+                    if (jwt == null) {
+                        return reject(cleanedExchange, ErrorCode.TOKEN_INVALID);
+                    }
+
                     // 4. 验签通过后查黑名单：命中说明该 token 已被登出 / 吊销，拒绝放行
                     String jti = jwt.getId();
                     if (jti != null) {
@@ -127,11 +140,6 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                     }
                     // 无 jti 的 token 无法做黑名单校验，仅写入上下文后放行
                     return chain.filter(mutateExchange(cleanedExchange, jwt));
-                })
-                // 6. 验签异常（签名错误 / 已过期 / 格式非法）统一返回「令牌无效」
-                .onErrorResume(ex -> {
-                    log.warn("JWT 校验失败：{}", ex.getMessage());
-                    return reject(cleanedExchange, ErrorCode.TOKEN_INVALID);
                 });
     }
 
@@ -203,7 +211,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                         return reject(exchange, ErrorCode.UNAUTHORIZED);
                     }
                 })
-                .switchIfEmpty(reject(exchange, ErrorCode.UNAUTHORIZED));
+                .switchIfEmpty(Mono.defer(() -> reject(exchange, ErrorCode.UNAUTHORIZED)));
     }
 
     private boolean isPermitPath(String path) {

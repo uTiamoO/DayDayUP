@@ -46,6 +46,12 @@
             <groupId>com.yuan</groupId>
             <artifactId>daydayup-common-feign</artifactId>
         </dependency>
+        <!-- 业务观测性：Prometheus registry（切片7）。MeterRegistry 已由 common-web 的 actuator 传递提供，
+             此依赖让 /actuator/prometheus 真正产出指标；版本由根 pom dependencyManagement 管理 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>

@@ -1,0 +1,15 @@
+{
+  "data": {
+    "novelId": 697647,
+    "novelName": "我不是戏神",
+    "authorName": "三九音域",
+    "cover": "https://img.example.test/697647.jpg",
+    "summary": "赤色流星划过天际之后，文明陷入停滞。",
+    "categoryNames": [{"className": "都市"}],
+    "wordNum": 3210000,
+    "chapterNum": 1200,
+    "isComplete": 0,
+    "lastUpdatedAt": "2026-07-10 12:00:00",
+    "lastChapter": {"chapterName": "第 1200 章 戏台之后"}
+  }
+}

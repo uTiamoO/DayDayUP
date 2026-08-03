@@ -1,10 +1,15 @@
 -- ============================================================
--- daydayup_admin 数据库初始化脚本（手动执行，未接入 Flyway）
+-- daydayup_admin 手工兜底初始化脚本
 -- 适用版本：v0.1.0
+-- 默认路径：应用启动时优先由 Flyway 执行 `db/migration` 下的版本化迁移脚本
+-- 保留原因：用于本地紧急兜底、人工重建、或数据库实例尚未纳入应用启动链路时的手工初始化
 -- ============================================================
 -- 用法：
 --   mysql -h 163.192.28.129 -P 23336 -u root -p < init.sql
 -- 或在 MySQL 客户端中打开本文件整体执行。
+-- 注意：
+--   1. 日常开发 / 部署优先使用 Flyway，而不是直接手工执行本脚本
+--   2. 本脚本仍包含 CREATE DATABASE / DROP TABLE 等兜底语句，不属于 Flyway 迁移脚本范畴
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `daydayup_admin`
@@ -263,11 +268,13 @@ VALUES
     (1003, 'admin:user:create', '用户-新增', 'API', 1003, 1, NOW(), NOW()),
     (1004, 'admin:user:update', '用户-修改', 'API', 1004, 1, NOW(), NOW()),
     (1005, 'admin:user:status', '用户-启停用', 'API', 1005, 1, NOW(), NOW()),
+    (1006, 'admin:user:resetPwd', '用户-重置密码', 'API', 1006, 1, NOW(), NOW()),
     (1011, 'admin:role:list', '角色-列表', 'API', 1011, 1, NOW(), NOW()),
     (1012, 'admin:role:detail', '角色-详情', 'API', 1012, 1, NOW(), NOW()),
     (1013, 'admin:role:create', '角色-新增', 'API', 1013, 1, NOW(), NOW()),
     (1014, 'admin:role:update', '角色-修改', 'API', 1014, 1, NOW(), NOW()),
     (1015, 'admin:role:status', '角色-启停用', 'API', 1015, 1, NOW(), NOW()),
+    (1016, 'admin:role:assign', '角色-分配权限', 'API', 1016, 1, NOW(), NOW()),
     (1021, 'admin:permission:list', '权限-列表', 'API', 1021, 1, NOW(), NOW()),
     (1022, 'admin:permission:detail', '权限-详情', 'API', 1022, 1, NOW(), NOW()),
     (1023, 'admin:permission:create', '权限-新增', 'API', 1023, 1, NOW(), NOW()),
@@ -292,9 +299,14 @@ VALUES
     (1055, 'admin:dict-item:status', '字典项-启停用', 'API', 1055, 1, NOW(), NOW()),
     (1056, 'admin:dict-item:delete', '字典项-删除', 'API', 1056, 1, NOW(), NOW()),
     (1061, 'admin:oper-log:list', '操作日志-列表', 'API', 1061, 1, NOW(), NOW()),
-    (1062, 'admin:oper-log:detail', '操作日志-详情', 'API', 1062, 1, NOW(), NOW());
+    (1062, 'admin:oper-log:detail', '操作日志-详情', 'API', 1062, 1, NOW(), NOW()),
+    (1071, 'admin:apikey:list', 'API密钥-列表', 'API', 1071, 1, NOW(), NOW()),
+    (1072, 'admin:apikey:create', 'API密钥-创建', 'API', 1072, 1, NOW(), NOW()),
+    (1073, 'admin:apikey:revoke', 'API密钥-吊销', 'API', 1073, 1, NOW(), NOW());
 
 -- 角色-权限关联：超级管理员 → admin:*, game:*, social:*
+-- 说明：admin:* 通配已覆盖全部 admin:xxx 细粒度权限（含 user:resetPwd / role:assign / apikey:*），
+-- 无需为超级管理员逐条授予；细粒度权限定义仅供自定义窄角色在角色-权限界面按需分配。
 INSERT INTO `sys_role_permission` (`id`, `role_id`, `permission_id`, `create_time`, `update_time`)
 VALUES
     (1, 1, 1, NOW(), NOW()),

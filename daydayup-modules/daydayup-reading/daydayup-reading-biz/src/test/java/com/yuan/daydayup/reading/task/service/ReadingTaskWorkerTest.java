@@ -1,13 +1,16 @@
 package com.yuan.daydayup.reading.task.service;
 
 import com.yuan.daydayup.reading.api.vo.ReadingTaskDrainVO;
+import com.yuan.daydayup.reading.observability.ReadingMetrics;
 import com.yuan.daydayup.reading.task.config.ReadingTaskProperties;
 import com.yuan.daydayup.reading.task.entity.ReadingTask;
 import com.yuan.daydayup.reading.task.service.impl.ReadingTaskWorkerImpl;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +20,7 @@ class ReadingTaskWorkerTest {
     private ReadingTaskService taskService;
     private ReadingTaskExecutor taskExecutor;
     private ReadingTaskWorker worker;
+    private SimpleMeterRegistry registry;
 
     @BeforeEach
     void setUp() {
@@ -24,7 +28,8 @@ class ReadingTaskWorkerTest {
         taskExecutor = mock(ReadingTaskExecutor.class);
         ReadingTaskProperties properties = new ReadingTaskProperties();
         properties.setBatchSize(10);
-        worker = new ReadingTaskWorkerImpl(taskService, taskExecutor, properties);
+        registry = new SimpleMeterRegistry();
+        worker = new ReadingTaskWorkerImpl(taskService, taskExecutor, properties, new ReadingMetrics(registry));
     }
 
     @Test
@@ -40,6 +45,9 @@ class ReadingTaskWorkerTest {
         assertEquals(1, result.getAcquired());
         assertEquals(1, result.getSucceeded());
         verify(taskService).markSucceeded(1L);
+        // 观测性：成功任务记 reading.task.total{type,result=succeeded}
+        assertNotNull(registry.find("reading.task.total")
+                .tag("type", "source_compile").tag("result", "succeeded").counter());
     }
 
     @Test

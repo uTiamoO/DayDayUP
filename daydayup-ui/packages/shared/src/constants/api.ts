@@ -15,5 +15,6 @@ export const API_PATHS = {
     DICT_ITEMS: '/admin/dict-items',
     OPER_LOGS: '/admin/oper-logs',
     API_KEYS: '/admin/api-keys',
+    DASHBOARD: '/admin/dashboard',
   },
 } as const;

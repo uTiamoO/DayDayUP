@@ -47,6 +47,16 @@ reading:
   source:
     # 书源导入默认目录（相对进程工作目录），可被 /ops/sources/import?dir= 覆盖
     import-dir: ${READING_SOURCE_IMPORT_DIR:docs/书源/spike-samples}
+    maoyan:
+      # 敏感 Header 只允许通过部署环境注入；默认空值不会发送。
+      authorization: ${READING_MAOYAN_AUTHORIZATION:}
+      client-device: ${READING_MAOYAN_CLIENT_DEVICE:}
+      client-brand: ${READING_MAOYAN_CLIENT_BRAND:}
+      client-version: ${READING_MAOYAN_CLIENT_VERSION:2.3.0}
+      client-channel: ${READING_MAOYAN_CLIENT_CHANNEL:android}
+      client-name: ${READING_MAOYAN_CLIENT_NAME:app.maoyankanshu.novel}
+      client-source: ${READING_MAOYAN_CLIENT_SOURCE:android}
+      alias-name: ${READING_MAOYAN_ALIAS_NAME:maoyankanshu}
   http:
     connect-timeout-ms: 5000
     read-timeout-ms: 10000
@@ -57,6 +67,13 @@ reading:
     default-min-interval-ms: 200
     max-concurrent-per-source: 2
     rate-wait-timeout-ms: 10000
+    # 出站代理（翻墙）：访问被墙/被 Cloudflare 拦的源站时开启。开启后本地 DNS+私网 IP 校验跳过，
+    # 由代理负责连通与远程 DNS（SOCKS）；同域校验仍生效。本机 Clash 常见 7890，V2rayN HTTP 常见 10809。
+    proxy:
+      enabled: ${READING_HTTP_PROXY_ENABLED:false}
+      type: ${READING_HTTP_PROXY_TYPE:HTTP}
+      host: ${READING_HTTP_PROXY_HOST:127.0.0.1}
+      port: ${READING_HTTP_PROXY_PORT:7890}
   script:
     # GraalJS 单脚本执行超时（看门狗 Context.interrupt）与语句数上限（双保险）
     timeout-ms: 3000

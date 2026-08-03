@@ -139,7 +139,7 @@ const activeMenu = computed(() => route.path);
 /* 鼠标悬停时的背景变暗效果 */
 :deep(.el-menu-item:hover),
 :deep(.el-sub-menu__title:hover) {
-  background-color: rgba(0, 0, 0, 0.04) !important;
+  background-color: var(--apple-hover-overlay) !important;
   color: var(--apple-text-primary) !important;
 }
 

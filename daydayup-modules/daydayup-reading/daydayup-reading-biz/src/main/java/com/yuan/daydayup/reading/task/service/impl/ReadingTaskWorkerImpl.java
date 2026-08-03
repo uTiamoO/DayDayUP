@@ -1,6 +1,7 @@
 package com.yuan.daydayup.reading.task.service.impl;
 
 import com.yuan.daydayup.reading.api.vo.ReadingTaskDrainVO;
+import com.yuan.daydayup.reading.observability.ReadingMetrics;
 import com.yuan.daydayup.reading.task.config.ReadingTaskProperties;
 import com.yuan.daydayup.reading.task.entity.ReadingTask;
 import com.yuan.daydayup.reading.task.service.ReadingTaskExecutor;
@@ -22,14 +23,17 @@ public class ReadingTaskWorkerImpl implements ReadingTaskWorker {
     private final ReadingTaskService taskService;
     private final ReadingTaskExecutor taskExecutor;
     private final ReadingTaskProperties properties;
+    private final ReadingMetrics metrics;
     private final String workerId;
 
     public ReadingTaskWorkerImpl(ReadingTaskService taskService,
                                  ReadingTaskExecutor taskExecutor,
-                                 ReadingTaskProperties properties) {
+                                 ReadingTaskProperties properties,
+                                 ReadingMetrics metrics) {
         this.taskService = taskService;
         this.taskExecutor = taskExecutor;
         this.properties = properties;
+        this.metrics = metrics;
         this.workerId = buildWorkerId();
     }
 
@@ -50,16 +54,20 @@ public class ReadingTaskWorkerImpl implements ReadingTaskWorker {
                 if (success) {
                     taskService.markSucceeded(task.getId());
                     vo.setSucceeded(vo.getSucceeded() + 1);
+                    metrics.recordTask(task.getTaskType(), "succeeded");
                 } else {
                     taskService.markPartial(task.getId());
                     vo.setPartialSucceeded(vo.getPartialSucceeded() + 1);
+                    metrics.recordTask(task.getTaskType(), "partial");
                 }
             } catch (Exception e) {
                 boolean retry = taskService.markFailed(task.getId(), e);
                 if (retry) {
                     vo.setRetryScheduled(vo.getRetryScheduled() + 1);
+                    metrics.recordTask(task.getTaskType(), "retry");
                 } else {
                     vo.setFailed(vo.getFailed() + 1);
+                    metrics.recordTask(task.getTaskType(), "failed");
                 }
             }
         }
